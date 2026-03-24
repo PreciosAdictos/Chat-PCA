@@ -28,6 +28,26 @@ body{font-family:var(--f);background:var(--bg);color:var(--t);font-size:13px;-we
 button{cursor:pointer;font-family:var(--f)}
 input,textarea{font-family:var(--f)}
 
+/* ── BANNER TEST ── */
+#test-banner{
+  display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
+  background:repeating-linear-gradient(
+    -45deg,
+    rgba(245,166,35,.92),
+    rgba(245,166,35,.92) 12px,
+    rgba(200,120,0,.85) 12px,
+    rgba(200,120,0,.85) 24px
+  );
+  color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-align:center;padding:5px 0;text-transform:uppercase;
+  text-shadow:0 1px 2px rgba(0,0,0,.4);
+  animation:bannerPulse 3s ease-in-out infinite;
+}
+#test-banner.visible{display:block}
+body.test-mode{padding-top:28px}
+body.test-mode #shell{height:calc(100vh - 28px)}
+@keyframes bannerPulse{0%,100%{opacity:1}50%{opacity:.85}}
+
 /* ── LOGIN ── */
 #login-screen{
   display:flex;align-items:center;justify-content:center;
@@ -401,6 +421,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 </style>
 </head>
 <body>
+<div id="test-banner">⚠️ &nbsp; ENTORNO DE PRUEBAS — Los datos no son reales &nbsp; ⚠️</div>
 
 <!-- ═══ LOGIN ═══ -->
 <div id="login-screen">
@@ -712,7 +733,19 @@ function startApp() {
 }
 
 // Auto-login si hay token guardado
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener('DOMContentLoaded', async () => {
+  // Detectar entorno (test vs prod) y mostrar banner si es test
+  try {
+    const envRes = await fetch(API + '/api/env');
+    if (envRes.ok) {
+      const { env } = await envRes.json();
+      if (env === 'test') {
+        document.getElementById('test-banner').classList.add('visible');
+        document.body.classList.add('test-mode');
+        document.title = '[TEST] WA Manager Pro';
+      }
+    }
+  } catch {}
   if (token && me) startApp();
 });
 
