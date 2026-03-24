@@ -9,28 +9,109 @@
  */
 
 require('dotenv').config();
-const express = require('express');
-const cors    = require('cors');
-const path    = require('path');
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
-const sqlite3 = require('sqlite3').verbose();
-const fs      = require('fs');
+const express      = require('express');
+const cors         = require('cors');
+const path         = require('path');
+const bcrypt       = require('bcryptjs');
+const jwt          = require('jsonwebtoken');
+const sqlite3      = require('sqlite3').verbose();
+const fs           = require('fs');
+const helmet       = require('helmet');
+const rateLimit    = require('express-rate-limit');
 
 const app = express();
-app.use(cors());
-app.use(express.json());
+
+// ─── Cabeceras de seguridad HTTP (Helmet) ─────────────────
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc:     ["'self'"],
+      scriptSrc:      ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
+      styleSrc:       ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
+      fontSrc:        ["'self'", 'fonts.gstatic.com'],
+      connectSrc:     ["'self'"],
+      imgSrc:         ["'self'", 'data:'],
+      frameSrc:       ["'none'"],
+      objectSrc:      ["'none'"],
+      upgradeInsecureRequests: [],
+    },
+  },
+  crossOriginEmbedderPolicy: false, // Necesario para SSE
+}));
+
+// ─── CORS restringido ─────────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    // Permitir sin origin (Railway health checks, mismo dominio)
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: origen no permitido'));
+  },
+  credentials: true,
+}));
+
+// ─── Límite de tamaño del body (50 KB) ───────────────────
+app.use(express.json({ limit: '50kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ─── Rate limiting ────────────────────────────────────────
+// Login: máximo 10 intentos por IP cada 15 minutos
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 10,
+  message: { error: 'Demasiados intentos. Espera 15 minutos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// API general: máximo 200 peticiones por IP cada 1 minuto
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 200,
+  message: { error: 'Demasiadas peticiones. Intenta en unos segundos.' },
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Webhooks externos: máximo 300 por minuto
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: 300,
+  message: { error: 'Rate limit excedido en webhook.' },
+});
+
+app.use('/api/', apiLimiter);
+app.use('/messages/', webhookLimiter);
+app.use('/webhook', webhookLimiter);
+
+// ─── Entorno ──────────────────────────────────────────────
+const IS_TEST = (process.env.NODE_ENV || 'production') === 'test';
+
+if (IS_TEST) {
+  console.log('⚠️  Arrancando en modo TEST — datos de prueba, no usar en producción');
+} else {
+  // En producción, variables críticas son obligatorias
+  const required = ['JWT_SECRET', 'EXTERNAL_API_KEY'];
+  const missing  = required.filter(k => !process.env[k]);
+  if (missing.length) {
+    console.error(`❌ Variables de entorno obligatorias en PROD: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 const PORT        = process.env.PORT || 3000;
-const JWT_SECRET  = process.env.JWT_SECRET || 'wa_secret_cambia_esto';
-const EXT_API_KEY = process.env.EXTERNAL_API_KEY || 'clave_externa_secreta';
+const JWT_SECRET  = process.env.JWT_SECRET  || (IS_TEST ? 'test_secret_inseguro' : '');
+const EXT_API_KEY = process.env.EXTERNAL_API_KEY || (IS_TEST ? 'test_api_key' : '');
 const EXT_SEND    = process.env.EXTERNAL_SEND_URL || '';
 
 // ─── Base de datos ────────────────────────────────────────
 const dbDir  = path.join(__dirname, 'db');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-const db = new sqlite3.Database(path.join(dbDir, 'wa.db'));
+const dbFile = IS_TEST ? 'wa_test.db' : 'wa.db';
+const db = new sqlite3.Database(path.join(dbDir, dbFile));
 
 // Wrapper para usar promesas con sqlite3
 const run  = (sql, p=[]) => new Promise((res,rej) => db.run(sql,p, function(e){ e?rej(e):res(this); }));
@@ -94,6 +175,14 @@ async function initDB() {
     body       TEXT NOT NULL,
     meta_id    TEXT,
     time_label TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  // Tabla para rastrear intentos de login fallidos
+  await run(`CREATE TABLE IF NOT EXISTS login_attempts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    username   TEXT NOT NULL,
+    ip         TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
 
@@ -267,19 +356,52 @@ app.get('/events', auth, async (req, res) => {
 });
 
 // ─── Auth ─────────────────────────────────────────────────
-app.post('/api/auth/login', async (req, res) => {
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
-    const agent = await get('SELECT * FROM agents WHERE username=?', [username.toLowerCase().trim()]);
-    if (!agent) return res.status(401).json({ error: 'Usuario no encontrado' });
-    if (!bcrypt.compareSync(password, agent.password)) return res.status(401).json({ error: 'Contraseña incorrecta' });
-    const token = jwt.sign({ id:agent.id, username:agent.username, name:agent.name, role:agent.role, color:agent.color }, JWT_SECRET, { expiresIn:'30d' });
-    res.json({ token, agent: { id:agent.id, username:agent.username, name:agent.name, role:agent.role, color:agent.color } });
-  } catch(e) { res.status(500).json({ error: e.message }); }
+
+    const user = String(username).toLowerCase().trim().slice(0, 64);
+
+    // Bloqueo por intentos fallidos: máx 5 en 10 minutos por username+IP
+    const recentFails = await get(
+      `SELECT COUNT(*) n FROM login_attempts WHERE username=? AND ip=? AND created_at > datetime('now','-10 minutes')`,
+      [user, ip]
+    );
+    if (recentFails.n >= 5) {
+      console.warn(`🔒 Login bloqueado: ${user} desde ${ip} (${recentFails.n} intentos)`);
+      return res.status(429).json({ error: 'Cuenta bloqueada temporalmente. Intenta en 10 minutos.' });
+    }
+
+    const agent = await get('SELECT * FROM agents WHERE username=?', [user]);
+    if (!agent || !bcrypt.compareSync(password, agent.password)) {
+      // Registrar intento fallido
+      await run('INSERT INTO login_attempts (username,ip) VALUES (?,?)', [user, ip]);
+      console.warn(`⚠️  Login fallido: ${user} desde ${ip}`);
+      // Mismo mensaje para usuario no encontrado o contraseña incorrecta (no revelar cuál)
+      return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    }
+
+    // Login exitoso — limpiar intentos fallidos
+    await run('DELETE FROM login_attempts WHERE username=? AND ip=?', [user, ip]);
+
+    const token = jwt.sign(
+      { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color },
+      JWT_SECRET,
+      { expiresIn: '8h' }
+    );
+    res.json({ token, agent: { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color } });
+  } catch(e) {
+    console.error('Login error:', e.message);
+    res.status(500).json({ error: IS_TEST ? e.message : 'Error interno del servidor' });
+  }
 });
 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
+
+// ─── Info de entorno (público, para el frontend) ──────────
+app.get('/api/env', (req, res) => res.json({ env: IS_TEST ? 'test' : 'production' }));
 
 // ─── Webhook Meta ─────────────────────────────────────────
 app.get('/webhook/:vt', async (req, res) => {
@@ -371,8 +493,16 @@ async function buildEnrichedSession(sessionId) {
 // ─── Sesiones ─────────────────────────────────────────────
 app.get('/api/sessions', auth, async (req, res) => {
   try {
-    let dates = { from: req.query.from||null, to: req.query.to||null };
-    if (req.query.period) { const pd=periodDates(req.query.period); if(pd) dates=pd; }
+    const dateRe = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
+    const rawFrom   = req.query.from   || null;
+    const rawTo     = req.query.to     || null;
+    const rawPeriod = req.query.period || null;
+    const validPeriods = ['today','week','month','quarter'];
+    let dates = {
+      from: rawFrom && dateRe.test(rawFrom) ? rawFrom : null,
+      to:   rawTo   && dateRe.test(rawTo)   ? rawTo   : null,
+    };
+    if (rawPeriod && validPeriods.includes(rawPeriod)) { const pd=periodDates(rawPeriod); if(pd) dates=pd; }
     const agentId = req.user.role==='admin' ? null : req.user.id;
     const rows = await getSessionRows(agentId, dates.from, dates.to);
     const enriched = await Promise.all(rows.map(enrichSession));
@@ -551,8 +681,21 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
 app.get('/api/analytics', auth, async (req, res) => {
   try {
     const aid = req.user.role==='admin' ? (req.query.agent_id?+req.query.agent_id:null) : req.user.id;
-    let dates = { from:req.query.from||null, to:req.query.to||null };
-    if (req.query.period) { const pd=periodDates(req.query.period); if(pd) dates=pd; }
+
+    // Sanitizar fechas — solo formato YYYY-MM-DD permitido
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const rawFrom   = req.query.from   || null;
+    const rawTo     = req.query.to     || null;
+    const rawPeriod = req.query.period || null;
+    const validPeriods = ['today','week','month','quarter'];
+
+    let dates = {
+      from: rawFrom   && dateRe.test(rawFrom)   ? rawFrom   : null,
+      to:   rawTo     && dateRe.test(rawTo)      ? rawTo     : null,
+    };
+    if (rawPeriod && validPeriods.includes(rawPeriod)) {
+      const pd = periodDates(rawPeriod); if (pd) dates = pd;
+    }
     const ac = aid ? `AND s.agent_id=${aid}` : '';
     const fc = dates.from ? `AND date(s.started_at)>='${dates.from}'` : '';
     const tc = dates.to   ? `AND date(s.started_at)<='${dates.to}'`   : '';
@@ -630,8 +773,9 @@ app.patch('/api/admin/agents/:id/password', auth, adminOnly, async (req, res) =>
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
-// ─── Seed demo ────────────────────────────────────────────
+// ─── Seed demo — solo disponible en entorno TEST ──────────
 app.post('/api/demo/seed', async (req, res) => {
+  if (!IS_TEST) return res.status(403).json({ error: 'No disponible en producción' });
   try {
     const angel = await get('SELECT id FROM agents WHERE username=?',['angel']);
     const clara = await get('SELECT id FROM agents WHERE username=?',['clara']);
@@ -693,20 +837,41 @@ app.post('/api/demo/seed', async (req, res) => {
   } catch(e) { console.error('Seed error:',e); res.status(500).json({ error:e.message }); }
 });
 
+// ─── Manejador global de errores ─────────────────────────
+app.use((err, req, res, next) => {
+  console.error('Error no controlado:', err.message);
+  res.status(500).json({
+    error: IS_TEST ? err.message : 'Error interno del servidor'
+  });
+});
+
 // ─── Arrancar ─────────────────────────────────────────────
-initDB().then(() => {
-  app.listen(PORT, () => {
+initDB().then(async () => {
+  app.listen(PORT, async () => {
     console.log(`
 ╔══════════════════════════════════════════════════════╗
-║  🟢  WA Manager Pro  →  :${PORT}                      ║
+║  ${IS_TEST ? '🟡  WA Manager Pro  [ENTORNO TEST]' : '🟢  WA Manager Pro  →  PRODUCCIÓN    '}  :${PORT}  ║
 ╠══════════════════════════════════════════════════════╣
+║  DB: ${dbFile.padEnd(47)}║
 ║  Sistema externo (AWS):                              ║
 ║    POST /messages/incoming  (header X-Api-Key)       ║
 ║    POST /messages/outgoing  (header X-Api-Key)       ║
 ║  Webhooks Meta:                                      ║
 ║    GET|POST /webhook/verify_angel                    ║
-║    GET|POST /webhook/verify_clara                    ║
+║    GET|POST /webhook/verify_clara                    ║${IS_TEST ? `
+║  ⚠️  TEST: seed demo auto, contraseñas por defecto   ║` : ''}
 ║  Demo: POST /api/demo/seed                           ║
 ╚══════════════════════════════════════════════════════╝`);
+
+    // Auto-seed solo en TEST y solo si la BD está vacía
+    if (IS_TEST) {
+      const count = await get('SELECT COUNT(*) n FROM sessions').catch(() => ({ n: 0 }));
+      if (count.n === 0) {
+        console.log('🌱 TEST: ejecutando seed de demo automático...');
+        await fetch(`http://localhost:${PORT}/api/demo/seed`, { method: 'POST' })
+          .then(() => console.log('✅ Seed demo completado'))
+          .catch(e => console.warn('⚠️  Seed demo falló:', e.message));
+      }
+    }
   });
 }).catch(e => { console.error('Error iniciando DB:', e); process.exit(1); });
