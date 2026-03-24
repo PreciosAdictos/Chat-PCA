@@ -22,15 +22,31 @@ app.use(cors());
 app.use(express.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// ─── Entorno ──────────────────────────────────────────────
+const IS_TEST = (process.env.NODE_ENV || 'production') === 'test';
+
+if (IS_TEST) {
+  console.log('⚠️  Arrancando en modo TEST — datos de prueba, no usar en producción');
+} else {
+  // En producción, variables críticas son obligatorias
+  const required = ['JWT_SECRET', 'EXTERNAL_API_KEY'];
+  const missing  = required.filter(k => !process.env[k]);
+  if (missing.length) {
+    console.error(`❌ Variables de entorno obligatorias en PROD: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
 const PORT        = process.env.PORT || 3000;
-const JWT_SECRET  = process.env.JWT_SECRET || 'wa_secret_cambia_esto';
-const EXT_API_KEY = process.env.EXTERNAL_API_KEY || 'clave_externa_secreta';
+const JWT_SECRET  = process.env.JWT_SECRET  || (IS_TEST ? 'test_secret_inseguro' : '');
+const EXT_API_KEY = process.env.EXTERNAL_API_KEY || (IS_TEST ? 'test_api_key' : '');
 const EXT_SEND    = process.env.EXTERNAL_SEND_URL || '';
 
 // ─── Base de datos ────────────────────────────────────────
 const dbDir  = path.join(__dirname, 'db');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
-const db = new sqlite3.Database(path.join(dbDir, 'wa.db'));
+const dbFile = IS_TEST ? 'wa_test.db' : 'wa.db';
+const db = new sqlite3.Database(path.join(dbDir, dbFile));
 
 // Wrapper para usar promesas con sqlite3
 const run  = (sql, p=[]) => new Promise((res,rej) => db.run(sql,p, function(e){ e?rej(e):res(this); }));
@@ -280,6 +296,9 @@ app.post('/api/auth/login', async (req, res) => {
 });
 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
+
+// ─── Info de entorno (público, para el frontend) ──────────
+app.get('/api/env', (req, res) => res.json({ env: IS_TEST ? 'test' : 'production' }));
 
 // ─── Webhook Meta ─────────────────────────────────────────
 app.get('/webhook/:vt', async (req, res) => {
@@ -694,19 +713,32 @@ app.post('/api/demo/seed', async (req, res) => {
 });
 
 // ─── Arrancar ─────────────────────────────────────────────
-initDB().then(() => {
-  app.listen(PORT, () => {
+initDB().then(async () => {
+  app.listen(PORT, async () => {
     console.log(`
 ╔══════════════════════════════════════════════════════╗
-║  🟢  WA Manager Pro  →  :${PORT}                      ║
+║  ${IS_TEST ? '🟡  WA Manager Pro  [ENTORNO TEST]' : '🟢  WA Manager Pro  →  PRODUCCIÓN    '}  :${PORT}  ║
 ╠══════════════════════════════════════════════════════╣
+║  DB: ${dbFile.padEnd(47)}║
 ║  Sistema externo (AWS):                              ║
 ║    POST /messages/incoming  (header X-Api-Key)       ║
 ║    POST /messages/outgoing  (header X-Api-Key)       ║
 ║  Webhooks Meta:                                      ║
 ║    GET|POST /webhook/verify_angel                    ║
-║    GET|POST /webhook/verify_clara                    ║
+║    GET|POST /webhook/verify_clara                    ║${IS_TEST ? `
+║  ⚠️  TEST: seed demo auto, contraseñas por defecto   ║` : ''}
 ║  Demo: POST /api/demo/seed                           ║
 ╚══════════════════════════════════════════════════════╝`);
+
+    // Auto-seed solo en TEST y solo si la BD está vacía
+    if (IS_TEST) {
+      const count = await get('SELECT COUNT(*) n FROM sessions').catch(() => ({ n: 0 }));
+      if (count.n === 0) {
+        console.log('🌱 TEST: ejecutando seed de demo automático...');
+        await fetch(`http://localhost:${PORT}/api/demo/seed`, { method: 'POST' })
+          .then(() => console.log('✅ Seed demo completado'))
+          .catch(e => console.warn('⚠️  Seed demo falló:', e.message));
+      }
+    }
   });
 }).catch(e => { console.error('Error iniciando DB:', e); process.exit(1); });
