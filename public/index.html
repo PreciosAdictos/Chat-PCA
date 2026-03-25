@@ -772,25 +772,39 @@ function startApp() {
 
 // Auto-login — verifica token contra el servidor
 window.addEventListener('DOMContentLoaded', async () => {
+  // 1. Siempre mostrar login primero — nunca pantalla negra
+  document.getElementById('login-screen').style.display = 'flex';
+  document.getElementById('shell').style.display = 'none';
+
+  // 2. Detectar entorno TEST (silencioso si falla)
   try {
     const envRes = await fetch(API + '/api/env');
     if (envRes.ok) {
-      const { env } = await envRes.json();
-      if (env === 'test') {
+      const d = await envRes.json();
+      if (d.env === 'test') {
         document.getElementById('test-banner').classList.add('visible');
         document.body.classList.add('test-mode');
         document.title = '[TEST] WA Manager Pro';
       }
     }
   } catch {}
+
+  // 3. Si hay token guardado, verificarlo — si es válido entrar directo
   if (token && me) {
     try {
-      const r = await fetch(API + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      const r = await fetch(API + '/api/auth/me', {
+        headers: { 'Authorization': 'Bearer ' + token }
+      });
       if (r.ok) { startApp(); return; }
     } catch {}
-    localStorage.removeItem('wa_token'); localStorage.removeItem('wa_me');
-    token = null; me = null;
+    // Token inválido o expirado — limpiar
+    localStorage.removeItem('wa_token');
+    localStorage.removeItem('wa_me');
+    token = null;
+    me = null;
   }
+  // Si llegamos aquí, mostrar login
+  document.getElementById('login-screen').style.display = 'flex';
 });
 
 // ── Filtro de fechas en bandeja ───────────────────────────
