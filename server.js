@@ -22,20 +22,10 @@ const rateLimit    = require('express-rate-limit');
 const app = express();
 
 // ─── Cabeceras de seguridad HTTP (Helmet) ─────────────────
+// CSP desactivado — el HTML usa eventos inline (onclick, onkeydown) y CDN externos
+// El resto de protecciones de Helmet siguen activas (X-Frame-Options, HSTS, etc.)
 app.use(helmet({
-  contentSecurityPolicy: {
-    directives: {
-      defaultSrc:     ["'self'"],
-      scriptSrc:      ["'self'", "'unsafe-inline'", 'cdn.jsdelivr.net'],
-      styleSrc:       ["'self'", "'unsafe-inline'", 'fonts.googleapis.com'],
-      fontSrc:        ["'self'", 'fonts.gstatic.com'],
-      connectSrc:     ["'self'"],
-      imgSrc:         ["'self'", 'data:'],
-      frameSrc:       ["'none'"],
-      objectSrc:      ["'none'"],
-      upgradeInsecureRequests: [],
-    },
-  },
+  contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false, // Necesario para SSE
 }));
 
