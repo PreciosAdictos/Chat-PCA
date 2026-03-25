@@ -226,7 +226,7 @@ async function seedAgents() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────
-const nowTime  = () => new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit' });
+const nowTime  = () => new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Madrid' });
 const mkAvatar = n  => (n||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
 const safeJson = v  => { try { return JSON.parse(v||'[]'); } catch { return []; } };
 
@@ -610,7 +610,7 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
 
     const clean = phone.replace(/[\s+]/g,'');
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : nowTime();
+    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
     const dir   = direction==='incoming' ? 'in' : 'bot';
 
     await upsertContact(clean, name, email);
@@ -651,7 +651,7 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'Falta message' });
     const clean = phone ? phone.replace(/[\s+]/g,'') : null;
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}) : nowTime();
+    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
 
     if (clean) {
       const session = await get("SELECT * FROM sessions WHERE phone=? AND status='active' ORDER BY id DESC LIMIT 1", [clean]);
@@ -763,6 +763,19 @@ app.patch('/api/admin/agents/:id/password', auth, adminOnly, async (req, res) =>
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
 
+// ─── Reset BD — borra todas las conversaciones, mensajes y contactos ──
+app.post('/api/admin/reset', auth, adminOnly, async (req, res) => {
+  try {
+    await run('DELETE FROM messages');
+    await run('DELETE FROM reviews');
+    await run('DELETE FROM sessions');
+    await run('DELETE FROM contacts');
+    await run('DELETE FROM login_attempts');
+    console.log(`🗑️  BD reseteada por ${req.user.username}`);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
 // ─── Seed demo — solo disponible en entorno TEST ──────────
 app.post('/api/demo/seed', async (req, res) => {
   if (!IS_TEST) return res.status(403).json({ error: 'No disponible en producción' });
@@ -799,12 +812,12 @@ app.post('/api/demo/seed', async (req, res) => {
       if (!r.lastID) continue;
       for (let i=0;i<s.msgs.length;i++) {
         const t=new Date(start);t.setMinutes(t.getMinutes()+i*5);
-        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,s.msgs[i][0],s.msgs[i][1],t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})]);
+        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,s.msgs[i][0],s.msgs[i][1],t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})]);
       }
       for (let i=0;i<s.revs.length;i++) {
         const t=new Date(end);t.setMinutes(t.getMinutes()+i*10);
         await run('INSERT INTO reviews (session_id,agent_id,quality,note,created_at) VALUES (?,?,?,?,?)',[r.lastID,s.ag.id,s.revs[i].q,s.revs[i].note,t.toISOString()]);
-        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'})]);
+        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})]);
       }
     }
 
