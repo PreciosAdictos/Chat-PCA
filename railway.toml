@@ -1,4 +1,8 @@
+# railway.toml — rama: main → Servicio PROD
 [deploy]
 startCommand = "node server.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
+
+[environment]
+NODE_ENV = "production"
