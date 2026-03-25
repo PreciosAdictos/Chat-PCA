@@ -31,35 +31,45 @@ input,textarea{font-family:var(--f)}
 /* ── BANNER TEST ── */
 #test-banner{
   display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-  background:repeating-linear-gradient(
-    -45deg,
-    rgba(245,166,35,.92),
-    rgba(245,166,35,.92) 12px,
-    rgba(200,120,0,.85) 12px,
-    rgba(200,120,0,.85) 24px
-  );
-  color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;
-  text-align:center;padding:5px 0;text-transform:uppercase;
-  text-shadow:0 1px 2px rgba(0,0,0,.4);
-  animation:bannerPulse 3s ease-in-out infinite;
-  pointer-events:none; /* No bloquea clics */
+  background:repeating-linear-gradient(-45deg,rgba(245,166,35,.92),rgba(245,166,35,.92) 12px,rgba(200,120,0,.85) 12px,rgba(200,120,0,.85) 24px);
+  color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;text-align:center;padding:5px 0;
+  text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.4);
+  animation:bannerPulse 3s ease-in-out infinite;pointer-events:none;
 }
 #test-banner.visible{display:block}
-body.test-mode #shell,
-body.test-mode #login-screen { margin-top:28px; height:calc(100vh - 28px); }
+body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(100vh - 28px)}
 @keyframes bannerPulse{0%,100%{opacity:1}50%{opacity:.85}}
 
-/* ── Botón cerrar sesión en nav ── */
-.nb-logout{
-  margin-top:4px;
-  opacity:.5;
-  transition:opacity .18s, background .18s;
-}
-.nb-logout:hover{
-  opacity:1;
-  background:rgba(255,87,87,.12) !important;
-}
-.nb-logout svg{stroke:var(--R);width:18px;height:18px}
+/* ── Botón cerrar sesión ── */
+.nb-logout{margin-top:4px;opacity:.5;transition:opacity .18s,background .18s}
+.nb-logout:hover{opacity:1;background:rgba(255,87,87,.12) !important}
+.nb-logout svg{stroke:var(--R) !important;width:18px;height:18px}
+
+/* ══ PANEL ADMIN ══ */
+#p-admin{flex-direction:column;background:var(--bg);overflow-y:auto;padding:24px 26px;gap:20px}
+.adm-hd h2{font-size:18px;font-weight:700;letter-spacing:-.03em}
+.adm-section{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:20px 22px;margin-bottom:18px}
+.adm-section-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:16px}
+.adm-agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
+.adm-agent-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:16px}
+.adm-agent-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.adm-agent-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.adm-agent-info{flex:1;min-width:0}
+.adm-agent-name{font-size:13px;font-weight:600;color:var(--t)}
+.adm-agent-user{font-size:11px;color:var(--t3);font-family:var(--mono)}
+.adm-agent-role{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:3px;letter-spacing:.05em}
+.role-admin{background:var(--Pubg);color:var(--Pu);border:1px solid rgba(167,139,250,.25)}
+.role-agent{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.25)}
+.adm-pw-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
+.adm-pw-row{display:flex;gap:7px}
+.adm-pw-input{flex:1;padding:9px 12px;font-size:12px;background:var(--bg4);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);outline:none;transition:border .18s;min-width:0}
+.adm-pw-input:focus{border-color:var(--G)}
+.adm-pw-input::placeholder{color:var(--t3)}
+.adm-pw-btn{padding:9px 14px;font-size:11px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);transition:all .18s;white-space:nowrap;flex-shrink:0}
+.adm-pw-btn:hover{background:#00ffa8}
+.adm-pw-btn:disabled{opacity:.4;cursor:not-allowed}
+.adm-pw-msg{font-size:11px;min-height:16px;margin-top:4px}
+.adm-pw-ok{color:var(--G)}.adm-pw-err{color:var(--R)}
 
 /* ── LOGIN ── */
 #login-screen{
@@ -430,36 +440,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .ps-custom input[type=date]:focus{border-color:var(--G)}
 .ps-custom input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .ps-apply{padding:5px 12px;font-size:11px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);font-family:var(--f)}
-/* ══ PANEL ADMIN ══ */
-#p-admin{flex-direction:column;background:var(--bg);overflow-y:auto;padding:24px 26px;gap:20px}
-.adm-hd{display:flex;align-items:center;justify-content:space-between;margin-bottom:4px}
-.adm-hd h2{font-size:18px;font-weight:700;letter-spacing:-.03em}
-.adm-hd p{font-size:12px;color:var(--t3);margin-top:2px}
-.adm-section{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:20px 22px;margin-bottom:18px}
-.adm-section-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:16px}
-.adm-agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.adm-agent-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:16px}
-.adm-agent-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.adm-agent-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.adm-agent-info{flex:1;min-width:0}
-.adm-agent-name{font-size:13px;font-weight:600;color:var(--t)}
-.adm-agent-user{font-size:11px;color:var(--t3);font-family:var(--mono)}
-.adm-agent-role{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:3px;letter-spacing:.05em}
-.role-admin{background:var(--Pubg);color:var(--Pu);border:1px solid rgba(167,139,250,.25)}
-.role-agent{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.25)}
-.adm-pw-form{display:flex;flex-direction:column;gap:8px}
-.adm-pw-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em}
-.adm-pw-row{display:flex;gap:7px}
-.adm-pw-input{flex:1;padding:9px 12px;font-size:12px;background:var(--bg4);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);outline:none;transition:border .18s;min-width:0}
-.adm-pw-input:focus{border-color:var(--G)}
-.adm-pw-input::placeholder{color:var(--t3)}
-.adm-pw-btn{padding:9px 14px;font-size:11px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);transition:all .18s;white-space:nowrap;flex-shrink:0}
-.adm-pw-btn:hover{background:#00ffa8}
-.adm-pw-btn:disabled{opacity:.4;cursor:not-allowed}
-.adm-pw-msg{font-size:11px;min-height:16px;margin-top:2px}
-.adm-pw-ok{color:var(--G)}.adm-pw-err{color:var(--R)}
 
-
+</style>
+</head>
 <body>
 <div id="test-banner">⚠️ &nbsp; ENTORNO DE PRUEBAS — Los datos no son reales &nbsp; ⚠️</div>
 
@@ -683,7 +666,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 
   <!-- ══ ADMIN ══ -->
   <div class="page" id="p-admin">
-    <div class="adm-hd">
+    <div class="adm-hd" style="margin-bottom:20px">
       <div><h2>Administración</h2><p style="font-size:12px;color:var(--t3);margin-top:2px">Gestión de agentes y contraseñas</p></div>
     </div>
     <div class="adm-section">
@@ -775,26 +758,20 @@ function doLogout() {
 function startApp() {
   document.getElementById('login-screen').style.display='none';
   document.getElementById('shell').style.display='flex';
-  // Avatar agente en nav
   const av = document.getElementById('agent-av');
   av.textContent = me.name.slice(0,2).toUpperCase();
   av.style.background = me.color+'22';
   av.style.color = me.color;
   av.title = me.name + ' (' + me.role + ')';
-  // WA chip en sidebar
   const chip = document.getElementById('wa-chip');
   if (me.role==='agent') { chip.textContent='WA '+me.name; chip.style.cssText=`color:${me.color};border-color:${me.color}44;background:${me.color}11`; }
   else { chip.textContent='Admin'; chip.style.cssText='color:var(--Pu);border-color:rgba(167,139,250,.3);background:var(--Pubg)'; }
-  // Mostrar botón admin solo si es admin
-  if (me.role === 'admin') {
-    document.getElementById('nb-admin').style.display = 'flex';
-  }
+  if (me.role==='admin') document.getElementById('nb-admin').style.display='flex';
   loadSessions();
 }
 
-// Auto-login si hay token guardado — verifica contra el servidor
+// Auto-login — verifica token contra el servidor
 window.addEventListener('DOMContentLoaded', async () => {
-  // Detectar entorno (test vs prod) y mostrar banner si es test
   try {
     const envRes = await fetch(API + '/api/env');
     if (envRes.ok) {
@@ -806,27 +783,13 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
   } catch {}
-
-  // Verificar token guardado contra el servidor
   if (token && me) {
     try {
-      const r = await fetch(API + '/api/auth/me', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (r.ok) {
-        startApp();
-      } else {
-        // Token expirado o inválido — limpiar y mostrar login
-        localStorage.removeItem('wa_token');
-        localStorage.removeItem('wa_me');
-        token = null; me = null;
-      }
-    } catch {
-      // Sin conexión — limpiar igual
-      localStorage.removeItem('wa_token');
-      localStorage.removeItem('wa_me');
-      token = null; me = null;
-    }
+      const r = await fetch(API + '/api/auth/me', { headers: { 'Authorization': 'Bearer ' + token } });
+      if (r.ok) { startApp(); return; }
+    } catch {}
+    localStorage.removeItem('wa_token'); localStorage.removeItem('wa_me');
+    token = null; me = null;
   }
 });
 
@@ -1509,100 +1472,6 @@ function openConvById(sessionId) {
 }
 
 
-// ═══════════════════════════════════════════
-// PANEL ADMIN
-// ═══════════════════════════════════════════
-async function loadAdminPanel() {
-  if (me.role !== 'admin') return;
-  try {
-    const r = await authFetch('/api/admin/agents');
-    if (!r.ok) throw new Error('Error cargando agentes');
-    const agents = await r.json();
-    renderAdminAgents(agents);
-  } catch(e) {
-    document.getElementById('adm-agents-grid').innerHTML =
-      `<p style="color:var(--R);font-size:12px">Error: ${esc(e.message)}</p>`;
-  }
-}
-
-function renderAdminAgents(agents) {
-  const grid = document.getElementById('adm-agents-grid');
-  if (!agents.length) {
-    grid.innerHTML = '<p style="color:var(--t3);font-size:12px">No hay agentes</p>';
-    return;
-  }
-  grid.innerHTML = agents.map(a => `
-    <div class="adm-agent-card">
-      <div class="adm-agent-top">
-        <div class="adm-agent-av" style="background:${a.color}22;color:${a.color}">
-          ${esc(a.name.slice(0,2).toUpperCase())}
-        </div>
-        <div class="adm-agent-info">
-          <div class="adm-agent-name">${esc(a.name)}</div>
-          <div class="adm-agent-user">@${esc(a.username)}</div>
-          <span class="adm-agent-role ${a.role==='admin'?'role-admin':'role-agent'}">${a.role.toUpperCase()}</span>
-        </div>
-      </div>
-      <div class="adm-pw-form">
-        <div class="adm-pw-label">Nueva contraseña</div>
-        <div class="adm-pw-row">
-          <input
-            class="adm-pw-input"
-            id="pw-input-${a.id}"
-            type="password"
-            placeholder="Mínimo 6 caracteres"
-            autocomplete="new-password"
-            onkeydown="if(event.key==='Enter')changePassword(${a.id})"
-          >
-          <button
-            class="adm-pw-btn"
-            id="pw-btn-${a.id}"
-            onclick="changePassword(${a.id})"
-          >Cambiar</button>
-        </div>
-        <div class="adm-pw-msg" id="pw-msg-${a.id}"></div>
-      </div>
-    </div>
-  `).join('');
-}
-
-async function changePassword(agentId) {
-  const input = document.getElementById('pw-input-' + agentId);
-  const btn   = document.getElementById('pw-btn-'   + agentId);
-  const msg   = document.getElementById('pw-msg-'   + agentId);
-  const pw = input.value.trim();
-
-  if (!pw || pw.length < 6) {
-    msg.textContent = 'Mínimo 6 caracteres';
-    msg.className = 'adm-pw-msg adm-pw-err';
-    return;
-  }
-
-  btn.disabled = true;
-  btn.textContent = '...';
-  msg.textContent = '';
-
-  try {
-    const r = await authFetch('/api/admin/agents/' + agentId + '/password', {
-      method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ password: pw }),
-    });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    input.value = '';
-    msg.textContent = '✓ Contraseña actualizada';
-    msg.className = 'adm-pw-msg adm-pw-ok';
-    setTimeout(() => { msg.textContent = ''; }, 3000);
-  } catch(e) {
-    msg.textContent = e.message || 'Error al cambiar contraseña';
-    msg.className = 'adm-pw-msg adm-pw-err';
-  } finally {
-    btn.disabled = false;
-    btn.textContent = 'Cambiar';
-  }
-}
-
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();const ctx=document.getElementById(id)?.getContext('2d');if(!ctx)return;charts[id]=new Chart(ctx,cfg);}
 
 // ═══════════════════════════════════════════
@@ -1615,15 +1484,67 @@ function esc(s=''){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').r
 function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});}
 function fmtDate(iso){if(!iso)return'—';try{return new Date(iso).toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit'});}catch{return'—';}}
 function fmtShort(iso){if(!iso)return'';try{const d=new Date(iso);const t=new Date();return d.toDateString()===t.toDateString()?d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}):d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});}catch{return'';}}
-function goPage(id,btn){
-  document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));
-  document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));
-  document.getElementById('p-'+id).classList.add('on');
-  btn.classList.add('on');
-  if(id==='a') loadAnalytics();
-  if(id==='admin') loadAdminPanel();
+function goPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));document.getElementById('p-'+id).classList.add('on');btn.classList.add('on');if(id==='a')loadAnalytics();if(id==='admin')loadAdminPanel();}
+function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),3000);}// ═══════════════════════════════════════════
+// PANEL ADMIN
+// ═══════════════════════════════════════════
+async function loadAdminPanel() {
+  if (me.role !== 'admin') return;
+  try {
+    const r = await authFetch('/api/admin/agents');
+    if (!r.ok) throw new Error('Error cargando agentes');
+    renderAdminAgents(await r.json());
+  } catch(e) {
+    document.getElementById('adm-agents-grid').innerHTML = `<p style="color:var(--R);font-size:12px">Error: ${esc(e.message)}</p>`;
+  }
 }
-function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),3000);}
+
+function renderAdminAgents(agents) {
+  const grid = document.getElementById('adm-agents-grid');
+  if (!agents.length) { grid.innerHTML='<p style="color:var(--t3);font-size:12px">No hay agentes</p>'; return; }
+  grid.innerHTML = agents.map(a => `
+    <div class="adm-agent-card">
+      <div class="adm-agent-top">
+        <div class="adm-agent-av" style="background:${a.color}22;color:${a.color}">${esc(a.name.slice(0,2).toUpperCase())}</div>
+        <div class="adm-agent-info">
+          <div class="adm-agent-name">${esc(a.name)}</div>
+          <div class="adm-agent-user">@${esc(a.username)}</div>
+          <span class="adm-agent-role ${a.role==='admin'?'role-admin':'role-agent'}">${a.role.toUpperCase()}</span>
+        </div>
+      </div>
+      <div class="adm-pw-label">Nueva contraseña</div>
+      <div class="adm-pw-row">
+        <input class="adm-pw-input" id="pw-input-${a.id}" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')changePassword(${a.id})">
+        <button class="adm-pw-btn" id="pw-btn-${a.id}" onclick="changePassword(${a.id})">Cambiar</button>
+      </div>
+      <div class="adm-pw-msg" id="pw-msg-${a.id}"></div>
+    </div>
+  `).join('');
+}
+
+async function changePassword(agentId) {
+  const input = document.getElementById('pw-input-' + agentId);
+  const btn   = document.getElementById('pw-btn-'   + agentId);
+  const msg   = document.getElementById('pw-msg-'   + agentId);
+  const pw = input.value.trim();
+  if (!pw || pw.length < 6) { msg.textContent='Mínimo 6 caracteres'; msg.className='adm-pw-msg adm-pw-err'; return; }
+  btn.disabled=true; btn.textContent='...'; msg.textContent='';
+  try {
+    const r = await authFetch('/api/admin/agents/'+agentId+'/password', {
+      method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw})
+    });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    input.value='';
+    msg.textContent='✓ Contraseña actualizada'; msg.className='adm-pw-msg adm-pw-ok';
+    setTimeout(()=>{msg.textContent='';},3000);
+  } catch(e) {
+    msg.textContent=e.message||'Error al cambiar contraseña'; msg.className='adm-pw-msg adm-pw-err';
+  } finally {
+    btn.disabled=false; btn.textContent='Cambiar';
+  }
+}
+
 </script>
 </body>
 </html>
