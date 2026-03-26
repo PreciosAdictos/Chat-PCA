@@ -18,6 +18,8 @@ const jwt          = require('jsonwebtoken');
 const { Pool }     = require('pg');
 const helmet       = require('helmet');
 const rateLimit    = require('express-rate-limit');
+const speakeasy    = require('speakeasy');
+const QRCode       = require('qrcode');
 
 const app = express();
 
@@ -195,6 +197,8 @@ async function initDB() {
       role       TEXT NOT NULL DEFAULT 'agent',
       color      TEXT DEFAULT '#00e5a0',
       password   TEXT NOT NULL,
+      totp_secret TEXT DEFAULT NULL,
+      totp_enabled BOOLEAN DEFAULT FALSE,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )`);
 
@@ -280,6 +284,10 @@ async function initDB() {
     await client.query('CREATE INDEX IF NOT EXISTS idx_sess_status ON sessions(status)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_msg_sess    ON messages(session_id)');
     await client.query('CREATE INDEX IF NOT EXISTS idx_rev_sess    ON reviews(session_id)');
+
+    // Migraciones para BDs existentes
+    await client.query("ALTER TABLE agents ADD COLUMN IF NOT EXISTS totp_secret TEXT DEFAULT NULL");
+    await client.query("ALTER TABLE agents ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT FALSE");
 
     await client.query('COMMIT');
     console.log('✅ Base de datos PostgreSQL lista');
@@ -487,7 +495,7 @@ app.get('/events', auth, async (req, res) => {
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
   try {
-    const { username, password } = req.body || {};
+    const { username, password, totp_code } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
     const user = String(username).toLowerCase().trim().slice(0, 64);
 
@@ -508,6 +516,46 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     }
 
     await pool.query('DELETE FROM login_attempts WHERE username=$1 AND ip=$2', [user, ip]);
+
+    // ── 2FA ──────────────────────────────────────────────
+    // Si el agente no tiene 2FA configurado → devolver señal para configurarlo
+    if (!agent.totp_enabled || !agent.totp_secret) {
+      // Generar secret temporal y devolver QR para configurar
+      const secret = speakeasy.generateSecret({
+        name: `WA Manager Pro (${agent.username})`,
+        issuer: 'WA Manager Pro'
+      });
+      // Guardar secret temporalmente (no activado aún)
+      await pool.query('UPDATE agents SET totp_secret=$1, totp_enabled=FALSE WHERE id=$2',
+        [secret.base32, agent.id]);
+      const qrUrl = await QRCode.toDataURL(secret.otpauth_url);
+      return res.json({
+        requires_2fa_setup: true,
+        qr: qrUrl,
+        secret: secret.base32,
+        agent_id: agent.id,
+        message: 'Escanea el QR con Google Authenticator y confirma con el código'
+      });
+    }
+
+    // Si tiene 2FA activado → verificar código
+    if (agent.totp_enabled) {
+      if (!totp_code) {
+        return res.json({ requires_2fa: true, message: 'Introduce el código de Google Authenticator' });
+      }
+      const valid = speakeasy.totp.verify({
+        secret: agent.totp_secret,
+        encoding: 'base32',
+        token: String(totp_code).replace(/\s/g, ''),
+        window: 1
+      });
+      if (!valid) {
+        await pool.query('INSERT INTO login_attempts (username,ip) VALUES ($1,$2)', [user, ip]);
+        return res.status(401).json({ error: 'Código 2FA incorrecto' });
+      }
+    }
+
+    // Login completo ✅
     const jti = `${agent.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const token = jwt.sign(
       { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color, jti },
@@ -522,6 +570,38 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 });
 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
+
+// ─── Confirmar configuración 2FA ──────────────────────────
+app.post('/api/auth/2fa/confirm', async (req, res) => {
+  try {
+    const { agent_id, totp_code } = req.body;
+    if (!agent_id || !totp_code) return res.status(400).json({ error: 'Faltan datos' });
+    const agent = await get('SELECT * FROM agents WHERE id=$1', [+agent_id]);
+    if (!agent || !agent.totp_secret) return res.status(400).json({ error: 'No hay secret configurado' });
+
+    const valid = speakeasy.totp.verify({
+      secret: agent.totp_secret,
+      encoding: 'base32',
+      token: String(totp_code).replace(/\s/g, ''),
+      window: 1
+    });
+    if (!valid) return res.status(401).json({ error: 'Código incorrecto. Inténtalo de nuevo.' });
+
+    // Activar 2FA
+    await pool.query('UPDATE agents SET totp_enabled=TRUE WHERE id=$1', [+agent_id]);
+    console.log(`✅ 2FA activado para agente #${agent_id}`);
+    res.json({ ok: true, message: '2FA activado correctamente' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Admin: desactivar 2FA de un agente ──────────────────
+app.post('/api/admin/agents/:id/disable-2fa', auth, adminOnly, async (req, res) => {
+  try {
+    await pool.query('UPDATE agents SET totp_secret=NULL, totp_enabled=FALSE WHERE id=$1', [+req.params.id]);
+    await logActivity(req.user.id, req.user.username, 'disable_2fa', `agente #${req.params.id}`, req.ip||'');
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 app.post('/api/auth/logout', auth, async (req, res) => {
   try {
@@ -903,7 +983,7 @@ app.get('/api/analytics', auth, async (req, res) => {
 });
 
 // ─── Admin ────────────────────────────────────────────────
-app.get('/api/admin/agents',      auth, adminOnly, async (req,res) => res.json(await all('SELECT id,username,name,role,color FROM agents')));
+app.get('/api/admin/agents', auth, adminOnly, async (req,res) => res.json(await all('SELECT id,username,name,role,color,totp_enabled FROM agents')));
 app.get('/api/admin/wa-accounts', auth, adminOnly, async (req,res) => res.json(await all('SELECT w.*,a.name agent_name,a.color agent_color FROM wa_accounts w JOIN agents a ON a.id=w.agent_id')));
 
 app.patch('/api/admin/wa-accounts/:id', auth, adminOnly, async (req, res) => {
