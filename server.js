@@ -231,11 +231,26 @@ async function seedAgents() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────
+// Hora de Madrid con cambio automático verano/invierno
+function madridTime(date) {
+  const d = date || new Date();
+  // Detectar si estamos en horario de verano (último domingo de marzo a último domingo de octubre)
+  const year = d.getUTCFullYear();
+  // Último domingo de marzo
+  const lastSundayMarch = new Date(Date.UTC(year, 2, 31));
+  lastSundayMarch.setUTCDate(31 - lastSundayMarch.getUTCDay());
+  // Último domingo de octubre
+  const lastSundayOctober = new Date(Date.UTC(year, 9, 31));
+  lastSundayOctober.setUTCDate(31 - lastSundayOctober.getUTCDay());
+  // En horario de verano sumamos 2h, en invierno 1h
+  const isSummer = d >= lastSundayMarch && d < lastSundayOctober;
+  const offset = isSummer ? 2 : 1;
+  const local = new Date(d.getTime() + offset * 3600000);
+  return local;
+}
 const nowTime = () => {
-  return new Date().toLocaleTimeString('es-ES', {
-    hour: '2-digit', minute: '2-digit',
-    timeZone: 'Europe/Madrid'
-  });
+  const d = madridTime();
+  return d.toISOString().slice(11,16).replace(':', ':');
 };
 const mkAvatar = n  => (n||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
 const safeJson = v  => { try { return JSON.parse(v||'[]'); } catch { return []; } };
@@ -640,7 +655,7 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
     const clean = phone.replace(/[\s+]/g,'');
     const text  = String(message).trim();
     const parsedTs = parseTimestamp(timestamp);
-    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+    const time  = parsedTs ? madridTime(parsedTs).toISOString().slice(11,16) : nowTime();
     const dir   = direction==='incoming' ? 'in' : 'bot';
 
     await upsertContact(clean, name, email, client_id);
@@ -682,7 +697,7 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
     const clean = phone ? phone.replace(/[\s+]/g,'') : null;
     const text  = String(message).trim();
     const parsedTs = parseTimestamp(timestamp);
-    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+    const time  = parsedTs ? madridTime(parsedTs).toISOString().slice(11,16) : nowTime();
 
     if (clean) {
       const session = await get("SELECT * FROM sessions WHERE phone=? AND status='active' ORDER BY id DESC LIMIT 1", [clean]);
@@ -843,12 +858,12 @@ app.post('/api/demo/seed', async (req, res) => {
       if (!r.lastID) continue;
       for (let i=0;i<s.msgs.length;i++) {
         const t=new Date(start);t.setMinutes(t.getMinutes()+i*5);
-        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,s.msgs[i][0],s.msgs[i][1],t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})]);
+        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,s.msgs[i][0],s.msgs[i][1],madridTime(t).toISOString().slice(11,16)]);
       }
       for (let i=0;i<s.revs.length;i++) {
         const t=new Date(end);t.setMinutes(t.getMinutes()+i*10);
         await run('INSERT INTO reviews (session_id,agent_id,quality,note,created_at) VALUES (?,?,?,?,?)',[r.lastID,s.ag.id,s.revs[i].q,s.revs[i].note,t.toISOString()]);
-        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})]);
+        await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,madridTime(t).toISOString().slice(11,16)]);
       }
     }
 
