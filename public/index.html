@@ -27,7 +27,7 @@ body{font-family:var(--f);background:var(--bg);color:var(--t);font-size:13px;-we
 ::-webkit-scrollbar-thumb{background:var(--b2);border-radius:3px}
 button{cursor:pointer;font-family:var(--f)}
 input,textarea{font-family:var(--f)}
- 
+
 /* ── BANNER TEST ── */
 #test-banner{
   display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
@@ -39,12 +39,12 @@ input,textarea{font-family:var(--f)}
 #test-banner.visible{display:block}
 body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(100vh - 28px)}
 @keyframes bannerPulse{0%,100%{opacity:1}50%{opacity:.85}}
- 
+
 /* ── Botón cerrar sesión ── */
 .nb-logout{margin-top:4px;opacity:.5;transition:opacity .18s,background .18s}
 .nb-logout:hover{opacity:1;background:rgba(255,87,87,.12) !important}
 .nb-logout svg{stroke:var(--R) !important;width:18px;height:18px}
- 
+
 /* ══ PANEL ADMIN ══ */
 #p-admin{flex-direction:column;background:var(--bg);overflow-y:auto;padding:24px 26px;gap:20px}
 .adm-hd h2{font-size:18px;font-weight:700;letter-spacing:-.03em}
@@ -70,8 +70,20 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .adm-pw-btn:disabled{opacity:.4;cursor:not-allowed}
 .adm-pw-msg{font-size:11px;min-height:16px;margin-top:4px}
 .adm-pw-ok{color:var(--G)}.adm-pw-err{color:var(--R)}
- 
-/* ── LOGIN ── */
+
+/* ── 2FA ── */
+.tfa-qr{text-align:center;margin:16px 0}
+.tfa-qr img{width:180px;height:180px;border-radius:var(--rs);border:2px solid var(--b2)}
+.tfa-secret{font-family:var(--mono);font-size:11px;color:var(--t3);text-align:center;margin-bottom:12px;word-break:break-all;background:var(--bg3);padding:8px;border-radius:var(--rs)}
+.tfa-code-input{
+  width:100%;padding:14px;font-size:22px;font-weight:700;letter-spacing:.4em;
+  text-align:center;font-family:var(--mono);
+  background:var(--bg3);border:2px solid var(--b);border-radius:var(--rs);
+  color:var(--t);outline:none;transition:border .18s;margin-bottom:12px;
+}
+.tfa-code-input:focus{border-color:var(--G)}
+.tfa-steps{font-size:11px;color:var(--t3);line-height:1.8;margin-bottom:16px}
+.tfa-steps b{color:var(--t2)}
 #login-screen{
   display:flex;align-items:center;justify-content:center;
   height:100vh;background:var(--bg);
@@ -101,10 +113,10 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 }
 .lf-btn:hover{background:#00ffa8;transform:translateY(-1px)}
 .lf-err{font-size:12px;color:var(--R);margin-top:10px;text-align:center;min-height:16px}
- 
+
 /* ── SHELL ── */
 #shell{display:flex;height:100vh;display:none}
- 
+
 /* ── NAV ── */
 #nav{
   width:58px;min-width:58px;background:var(--bg2);border-right:1px solid var(--b);
@@ -128,27 +140,27 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .live{width:6px;height:6px;border-radius:50%;background:var(--t3);margin-top:6px;transition:background .3s}
 .live.on{background:var(--G);box-shadow:0 0 8px var(--Gg);animation:lp 2s infinite}
 @keyframes lp{0%,100%{opacity:1}55%{opacity:.3}}
- 
+
 /* ── PAGES ── */
 .page{display:none;flex:1;overflow:hidden;min-width:0}
 .page.on{display:flex}
- 
+
 /* ═══════════════════════════════════
    CONVERSACIONES
 ═══════════════════════════════════ */
 #p-c{flex-direction:row}
- 
+
 #sb{width:305px;min-width:305px;background:var(--bg2);border-right:1px solid var(--b);display:flex;flex-direction:column}
 #sb-top{padding:16px 14px 8px}
 #sb-top h2{font-size:13px;font-weight:600;letter-spacing:-.01em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
 .wa-chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px;border:1px solid;opacity:.9}
- 
+
 /* Tabs */
 .tabs{display:flex;gap:2px;background:var(--bg3);border-radius:var(--rs);padding:3px;margin-bottom:8px}
 .tab{flex:1;font-size:11px;font-weight:500;padding:5px 4px;border-radius:6px;border:none;background:transparent;color:var(--t3);transition:all .18s var(--ease);white-space:nowrap;text-align:center}
 .tab:hover{color:var(--t2)}
 .tab.on{background:var(--bg4);color:var(--t);box-shadow:0 1px 4px rgba(0,0,0,.35)}
- 
+
 /* Filtro calidad */
 #qf-row{display:none;gap:4px;margin-bottom:8px}
 #qf-row.vis{display:flex}
@@ -156,14 +168,14 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .qf.alta{color:var(--G);border-color:rgba(0,229,160,.2)}.qf.alta:hover,.qf.alta.on{background:var(--Gbg);border-color:var(--G)}
 .qf.media{color:var(--A);border-color:rgba(245,166,35,.2)}.qf.media:hover,.qf.media.on{background:var(--Abg);border-color:var(--A)}
 .qf.baja{color:var(--R);border-color:rgba(255,87,87,.2)}.qf.baja:hover,.qf.baja.on{background:var(--Rbg);border-color:var(--R)}
- 
+
 /* Búsqueda */
 .srch{position:relative;margin-bottom:6px}
 .srch input{width:100%;padding:8px 12px 8px 32px;font-size:12px;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);outline:none;transition:border .18s}
 .srch input::placeholder{color:var(--t3)}
 .srch input:focus{border-color:var(--G)}
 .si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none;width:13px;height:13px}
- 
+
 /* Tarjetas conversación */
 #conv-list{flex:1;overflow-y:auto}
 .ci{padding:11px 14px;border-bottom:1px solid var(--b);transition:background .12s;position:relative}
@@ -189,7 +201,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .rd{width:9px;height:9px;border-radius:3px;flex-shrink:0}
 .rd.alta{background:var(--G);opacity:.8}.rd.media{background:var(--A);opacity:.8}.rd.baja{background:var(--R);opacity:.8}.rd.act{background:var(--t3);opacity:.4}
 .rd-lbl{font-size:9px;color:var(--t3);margin-left:2px;font-family:var(--mono)}
- 
+
 /* ── CHAT ── */
 #chat{flex:1;display:flex;flex-direction:column;min-width:0}
 #ch-head{padding:11px 16px;background:var(--bg2);border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px}
@@ -206,7 +218,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .hb:hover{background:var(--bg3);color:var(--t2);border-color:var(--b2)}
 .hb.rev{color:var(--G);border-color:rgba(0,229,160,.3)}.hb.rev:hover{background:var(--Gbg);border-color:var(--G)}
 .hb.close-btn{color:var(--t3)}.hb.close-btn:hover{color:var(--R);border-color:rgba(255,87,87,.3);background:var(--Rbg)}
- 
+
 /* Mensajes */
 #msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
 .msg{max-width:70%}
@@ -222,7 +234,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .sq{font-weight:700;font-size:10px}.sq.alta{color:var(--G)}.sq.media{color:var(--A)}.sq.baja{color:var(--R)}
 .empty-c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t3);gap:10px}
 .empty-c .ico{font-size:32px;opacity:.18}
- 
+
 /* Input */
 #in-zone{padding:12px 14px;background:var(--bg2);border-top:1px solid var(--b);flex-shrink:0}
 .tpls{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px}
@@ -236,7 +248,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 #send-b{padding:10px 18px;background:var(--G);color:#051209;border:none;border-radius:20px;font-size:12px;font-weight:700;transition:all .18s;white-space:nowrap}
 #send-b:hover{background:#00ffa8;transform:scale(1.03)}
 #send-b:disabled{opacity:.4;cursor:not-allowed;transform:none}
- 
+
 /* ── INFO PANEL ── */
 #ip{width:240px;min-width:240px;background:var(--bg2);border-left:1px solid var(--b);padding:16px 13px;display:flex;flex-direction:column;gap:18px;overflow-y:auto}
 .iph{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
@@ -245,7 +257,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .stbadge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px}
 .st-a{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.22)}
 .st-c{background:var(--bg4);color:var(--t3);border:1px solid var(--b2)}
- 
+
 /* Timeline de revisiones */
 .rev-timeline{display:flex;flex-direction:column;gap:8px}
 .rev-item{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:10px 11px;border-left:3px solid;position:relative}
@@ -276,7 +288,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
   padding:1px 6px;border-radius:10px;
   background:var(--bg5);color:var(--t3);border:1px solid var(--b2);
 }
- 
+
 /* Etiqueta calidad actual visible en tarjeta conversación */
 .ci-qual-current{
   display:inline-flex;align-items:center;gap:3px;
@@ -287,7 +299,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .cqc-alta {background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.22)}
 .cqc-media{background:var(--Abg);color:var(--A);border:1px solid rgba(245,166,35,.22)}
 .cqc-baja {background:var(--Rbg);color:var(--R);border:1px solid rgba(255,87,87,.22)}
- 
+
 /* Historial sesiones */
 .hi{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:9px 10px;margin-bottom:6px}
 .hi-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
@@ -296,17 +308,17 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .hi-date{font-size:10px;color:var(--t3);font-family:var(--mono)}
 .hi-prev{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .hi-meta{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
- 
+
 /* Evolución calidad */
 .evo-bar{display:flex;gap:2px;align-items:flex-end;height:28px;margin-top:6px}
 .evo-seg{border-radius:3px 3px 0 0;min-width:12px;transition:height .3s var(--ease);cursor:default}
- 
+
 textarea.ip-note{width:100%;padding:8px;font-size:11px;line-height:1.6;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);resize:none;min-height:68px;outline:none;transition:border .18s}
 textarea.ip-note:focus{border-color:var(--G)}
 textarea.ip-note::placeholder{color:var(--t3)}
 .ip-save{margin-top:5px;width:100%;padding:7px;font-size:11px;font-weight:500;background:transparent;border:1px solid var(--b);border-radius:var(--rs);color:var(--t3);transition:all .18s}
 .ip-save:hover{background:var(--Gbg);color:var(--G);border-color:var(--G)}
- 
+
 /* ═══════════════════════════════════
    MODAL REVISIÓN
 ═══════════════════════════════════ */
@@ -345,7 +357,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .m-ok{flex:2;padding:11px;font-size:13px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);transition:all .18s}
 .m-ok:hover{background:#00ffa8}
 .m-ok:disabled{opacity:.35;cursor:not-allowed}
- 
+
 /* ═══════════════════════════════════
    ANALÍTICA
 ═══════════════════════════════════ */
@@ -363,7 +375,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .afb.alta.on{background:var(--Gbg);color:var(--G);border-color:var(--G)}
 .afb.media.on{background:var(--Abg);color:var(--A);border-color:var(--A)}
 .afb.baja.on{background:var(--Rbg);color:var(--R);border-color:var(--R)}
- 
+
 /* KPIs */
 .kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px}
 .kpi{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:15px 15px 13px;transition:border .2s}
@@ -372,7 +384,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .kpi-v{font-size:30px;font-weight:300;color:var(--t);letter-spacing:-.04em;line-height:1}
 .kpi-v.g{color:var(--G)}.kpi-v.a{color:var(--A)}.kpi-v.r{color:var(--R)}
 .kpi-s{font-size:10px;color:var(--t3);margin-top:4px;font-family:var(--mono)}
- 
+
 .cg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
 .cc{background:var(--bg2);border:1px solid var(--b);border-radius:var(--r);padding:17px 17px 15px}
 .cc.wide{grid-column:1/-1}
@@ -380,7 +392,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .cct span{font-size:10px;font-weight:400;color:var(--t3)}
 .cw{position:relative;height:190px}
 .cw.tall{height:240px}
- 
+
 /* Tabla agentes */
 .at{width:100%;border-collapse:collapse}
 .at th{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;padding:0 0 8px;text-align:left;border-bottom:1px solid var(--b)}
@@ -388,7 +400,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .at tr:last-child td{border-bottom:none}
 .at .mn{font-family:var(--mono);font-size:11px;color:var(--t2)}
 .mbar{display:inline-block;height:7px;border-radius:3px;min-width:2px}
- 
+
 /* Tabla historial */
 .tw{overflow-x:auto}
 .tt{width:100%;border-collapse:collapse;font-size:11px}
@@ -396,11 +408,11 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .tt td{padding:8px 10px;border-bottom:1px solid var(--b);color:var(--t2)}
 .tt tr:hover td{background:rgba(255,255,255,.015)}
 .tt td.nm{color:var(--t);font-weight:500}.tt td.mn{font-family:var(--mono);font-size:10px}
- 
+
 /* Toast */
 #toast{position:fixed;bottom:20px;right:20px;background:var(--bg3);border:1px solid var(--b2);color:var(--t);padding:10px 16px;border-radius:var(--rs);font-size:12px;opacity:0;transform:translateY(6px);transition:all .22s var(--ease);pointer-events:none;z-index:400;max-width:320px}
 #toast.show{opacity:1;transform:translateY(0)}
- 
+
 /* ── Filtro de fechas ─────────────────── */
 .date-filter{display:flex;gap:5px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
 .date-filter input[type=date]{flex:1;padding:5px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);outline:none;min-width:0;font-family:var(--mono);transition:border .18s}
@@ -440,12 +452,12 @@ textarea.ip-note::placeholder{color:var(--t3)}
 .ps-custom input[type=date]:focus{border-color:var(--G)}
 .ps-custom input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5)}
 .ps-apply{padding:5px 12px;font-size:11px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);font-family:var(--f)}
- 
+
 </style>
 </head>
 <body>
 <div id="test-banner">⚠️ &nbsp; ENTORNO DE PRUEBAS — Los datos no son reales &nbsp; ⚠️</div>
- 
+
 <!-- ═══ LOGIN ═══ -->
 <div id="login-screen">
   <div class="login-box">
@@ -462,8 +474,46 @@ textarea.ip-note::placeholder{color:var(--t3)}
     <button class="lf-btn" onclick="doLogin()">Entrar</button>
     <div class="lf-err" id="l-err"></div>
   </div>
+
+  <!-- ── Pantalla: configurar 2FA por primera vez ── -->
+  <div class="login-box" id="setup-2fa-screen" style="display:none;width:400px">
+    <div class="login-logo">
+      <div class="login-logo-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#051209" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div><h1>Activar 2FA</h1><span>Configura Google Authenticator</span></div>
+    </div>
+    <div class="tfa-steps">
+      <b>1.</b> Abre <b>Google Authenticator</b> en tu móvil<br>
+      <b>2.</b> Pulsa <b>+</b> → <b>Escanear código QR</b><br>
+      <b>3.</b> Escanea el código de abajo<br>
+      <b>4.</b> Introduce el código de 6 dígitos que aparece
+    </div>
+    <div class="tfa-qr"><img id="tfa-qr-img" src="" alt="QR"></div>
+    <div class="tfa-secret" id="tfa-secret"></div>
+    <div class="lf-label">Código de verificación</div>
+    <input class="tfa-code-input" id="tfa-setup-code" type="text" maxlength="6" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')confirmSetup2FA()">
+    <button class="lf-btn" onclick="confirmSetup2FA()">Activar 2FA</button>
+    <div class="lf-err" id="tfa-setup-err"></div>
+  </div>
+
+  <!-- ── Pantalla: verificar código 2FA ── -->
+  <div class="login-box" id="verify-2fa-screen" style="display:none">
+    <div class="login-logo">
+      <div class="login-logo-ico">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#051209" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
+      </div>
+      <div><h1>Verificación 2FA</h1><span>Google Authenticator</span></div>
+    </div>
+    <p style="font-size:12px;color:var(--t3);margin-bottom:16px">Introduce el código de 6 dígitos de tu app Google Authenticator</p>
+    <div class="lf-label">Código</div>
+    <input class="tfa-code-input" id="tfa-verify-code" type="text" maxlength="6" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLogin2FA()">
+    <button class="lf-btn" onclick="verifyLogin2FA()">Verificar</button>
+    <div class="lf-err" id="tfa-verify-err"></div>
+    <button style="margin-top:10px;width:100%;padding:8px;font-size:11px;background:transparent;border:none;color:var(--t3);cursor:pointer" onclick="backToLogin()">← Volver al login</button>
+  </div>
 </div>
- 
+
 <!-- ═══ SHELL ═══ -->
 <div id="shell">
   <nav id="nav">
@@ -487,7 +537,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
     </button>
     <div class="live" id="live"></div>
   </nav>
- 
+
   <!-- ══ CONVERSACIONES ══ -->
   <div class="page on" id="p-c">
     <div id="sb">
@@ -516,7 +566,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
       </div>
       <div id="conv-list"></div>
     </div>
- 
+
     <div id="chat">
       <div id="ch-head">
         <div id="ch-c" class="ch-l"><p style="color:var(--t3);font-size:12px">Selecciona una conversación</p></div>
@@ -547,10 +597,10 @@ textarea.ip-note::placeholder{color:var(--t3)}
         </div>
       </div>
     </div>
- 
+
     <div id="ip"><div class="iph">Info</div><p style="font-size:11px;color:var(--t3)">Selecciona una conversación</p></div>
   </div>
- 
+
   <!-- ══ ANALÍTICA ══ -->
   <div class="page" id="p-a">
     <div class="a-hd">
@@ -607,7 +657,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
         <tbody id="hist-tb"></tbody>
       </table></div>
     </div>
- 
+
     <!-- Tasa de respuesta semanal/mensual -->
     <div class="cc wide">
       <div class="cct">Respondidos vs Sin respuesta <span>semana actual y mes actual</span></div>
@@ -642,13 +692,13 @@ textarea.ip-note::placeholder{color:var(--t3)}
         </div>
       </div>
     </div>
- 
+
     <!-- Evolución semanal y mensual -->
     <div class="cg">
       <div class="cc"><div class="cct">Evolución semanal <span>últimas 8 semanas</span></div><div class="cw"><canvas id="ch-weekly"></canvas></div></div>
       <div class="cc"><div class="cct">Evolución mensual <span>últimos 6 meses</span></div><div class="cw"><canvas id="ch-monthly"></canvas></div></div>
     </div>
- 
+
     <!-- Sin respuesta: último msg nuestro +3 días sin contestar -->
     <div class="cc wide">
       <div class="cct" style="display:flex;align-items:center;justify-content:space-between">
@@ -663,7 +713,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
       </div>
     </div>
   </div>
- 
+
   <!-- ══ ADMIN ══ -->
   <div class="page" id="p-admin">
     <div class="adm-hd" style="margin-bottom:20px">
@@ -682,9 +732,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
       <div id="reset-msg" style="font-size:11px;margin-top:10px;min-height:16px"></div>
     </div>
   </div>
- 
+
 </div>
- 
+
 <div id="ov">
   <div id="modal">
     <div class="m-ttl">Añadir revisión</div>
@@ -705,9 +755,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
     </div>
   </div>
 </div>
- 
+
 <div id="toast"></div>
- 
+
 <script>
 'use strict';
 // ═══════════════════════════════════════════
@@ -724,10 +774,14 @@ let avMap = {}, avN = 0;
 let charts = {};
 let pendingId = null, selQual = null;
 let sse = null;
- 
+
 // ═══════════════════════════════════════════
 // AUTH
 // ═══════════════════════════════════════════
+let pendingAgentId = null;
+let pendingUser = null;
+let pendingPass = null;
+
 async function doLogin() {
   const user = document.getElementById('l-user').value.trim();
   const pass = document.getElementById('l-pass').value;
@@ -737,6 +791,29 @@ async function doLogin() {
     const r = await fetch(API+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
     const d = await r.json();
     if (d.error) { document.getElementById('l-err').textContent=d.error; return; }
+
+    // Primera vez — configurar 2FA
+    if (d.requires_2fa_setup) {
+      pendingAgentId = d.agent_id;
+      pendingUser = user; pendingPass = pass;
+      document.getElementById('tfa-qr-img').src = d.qr;
+      document.getElementById('tfa-secret').textContent = 'Código manual: ' + d.secret;
+      document.getElementById('login-screen').querySelector('.login-box').style.display = 'none';
+      document.getElementById('setup-2fa-screen').style.display = 'block';
+      setTimeout(() => document.getElementById('tfa-setup-code').focus(), 100);
+      return;
+    }
+
+    // 2FA ya configurado — pedir código
+    if (d.requires_2fa) {
+      pendingUser = user; pendingPass = pass;
+      document.getElementById('login-screen').querySelector('.login-box').style.display = 'none';
+      document.getElementById('verify-2fa-screen').style.display = 'block';
+      setTimeout(() => document.getElementById('tfa-verify-code').focus(), 100);
+      return;
+    }
+
+    // Login completo
     token = d.token; me = d.agent;
     localStorage.setItem('wa_token', token);
     localStorage.setItem('wa_me', JSON.stringify(me));
@@ -745,22 +822,55 @@ async function doLogin() {
     document.getElementById('l-err').textContent='No se pudo conectar al servidor';
   }
 }
- 
-async function doLogout() {
-  // Revocar token en el servidor
+
+async function confirmSetup2FA() {
+  const code = document.getElementById('tfa-setup-code').value.trim();
+  document.getElementById('tfa-setup-err').textContent = '';
+  if (code.length !== 6) { document.getElementById('tfa-setup-err').textContent='El código debe tener 6 dígitos'; return; }
   try {
-    await fetch(API + '/api/auth/logout', {
-      method: 'POST',
-      headers: { 'Authorization': 'Bearer ' + token }
-    });
-  } catch {}
+    const r = await fetch(API+'/api/auth/2fa/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent_id:pendingAgentId,totp_code:code})});
+    const d = await r.json();
+    if (d.error) { document.getElementById('tfa-setup-err').textContent=d.error; return; }
+    // 2FA activado — hacer login completo
+    document.getElementById('setup-2fa-screen').style.display = 'none';
+    document.getElementById('verify-2fa-screen').style.display = 'block';
+    document.getElementById('tfa-verify-code').value = '';
+    setTimeout(() => document.getElementById('tfa-verify-code').focus(), 100);
+  } catch(e) { document.getElementById('tfa-setup-err').textContent='Error de conexión'; }
+}
+
+async function verifyLogin2FA() {
+  const code = document.getElementById('tfa-verify-code').value.trim();
+  document.getElementById('tfa-verify-err').textContent = '';
+  if (code.length !== 6) { document.getElementById('tfa-verify-err').textContent='El código debe tener 6 dígitos'; return; }
+  try {
+    const r = await fetch(API+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:pendingUser,password:pendingPass,totp_code:code})});
+    const d = await r.json();
+    if (d.error) { document.getElementById('tfa-verify-err').textContent=d.error; return; }
+    token = d.token; me = d.agent;
+    localStorage.setItem('wa_token', token);
+    localStorage.setItem('wa_me', JSON.stringify(me));
+    startApp();
+  } catch(e) { document.getElementById('tfa-verify-err').textContent='Error de conexión'; }
+}
+
+function backToLogin() {
+  pendingUser = null; pendingPass = null; pendingAgentId = null;
+  document.getElementById('verify-2fa-screen').style.display = 'none';
+  document.getElementById('setup-2fa-screen').style.display = 'none';
+  document.getElementById('login-screen').querySelector('.login-box').style.display = 'block';
+  document.getElementById('l-pass').value = '';
+  document.getElementById('l-err').textContent = '';
+}
+
+function doLogout() {
   token=null; me=null; sessions={};
   localStorage.removeItem('wa_token'); localStorage.removeItem('wa_me');
   sse?.close();
   document.getElementById('shell').style.display='none';
   document.getElementById('login-screen').style.display='flex';
 }
- 
+
 // ═══════════════════════════════════════════
 // ARRANQUE
 // ═══════════════════════════════════════════
@@ -778,13 +888,13 @@ function startApp() {
   if (me.role==='admin') document.getElementById('nb-admin').style.display='flex';
   loadSessions();
 }
- 
+
 // Auto-login — verifica token contra el servidor
 window.addEventListener('DOMContentLoaded', async () => {
   // 1. Siempre mostrar login primero — nunca pantalla negra
   document.getElementById('login-screen').style.display = 'flex';
   document.getElementById('shell').style.display = 'none';
- 
+
   // 2. Detectar entorno TEST (silencioso si falla)
   try {
     const envRes = await fetch(API + '/api/env');
@@ -797,7 +907,7 @@ window.addEventListener('DOMContentLoaded', async () => {
       }
     }
   } catch {}
- 
+
   // 3. Si hay token guardado, verificarlo — si es válido entrar directo
   if (token && me) {
     try {
@@ -815,23 +925,23 @@ window.addEventListener('DOMContentLoaded', async () => {
   // Si llegamos aquí, mostrar login
   document.getElementById('login-screen').style.display = 'flex';
 });
- 
+
 // ── Filtro de fechas en bandeja ───────────────────────────
 let dateFrom = null, dateTo = null;
- 
+
 function applyDateFilter() {
   dateFrom = document.getElementById('df-from').value || null;
   dateTo   = document.getElementById('df-to').value   || null;
   loadSessionsWithDates();
 }
- 
+
 function clearDateFilter() {
   dateFrom = null; dateTo = null;
   document.getElementById('df-from').value = '';
   document.getElementById('df-to').value   = '';
   loadSessionsWithDates();
 }
- 
+
 async function loadSessionsWithDates() {
   try {
     let url = API + '/api/sessions';
@@ -853,12 +963,12 @@ async function loadSessionsWithDates() {
     renderList(); updatePip();
   } catch { /* fallback to local */ renderList(); }
 }
- 
+
 // ── Período analítica ─────────────────────────────────────
 let analyticsPeriod = 'week';
 let analyticsFromCustom = null;
 let analyticsToCustom   = null;
- 
+
 function setPeriod(p, el) {
   analyticsPeriod = p;
   document.querySelectorAll('.ps-btn').forEach(b => b.classList.remove('on')); el.classList.add('on');
@@ -866,14 +976,14 @@ function setPeriod(p, el) {
   custom.classList.toggle('vis', p === 'custom');
   if (p !== 'custom') loadAnalytics();
 }
- 
+
 function applyCustomPeriod() {
   analyticsFromCustom = document.getElementById('a-from').value;
   analyticsToCustom   = document.getElementById('a-to').value;
   if (!analyticsFromCustom || !analyticsToCustom) { toast('Selecciona las dos fechas'); return; }
   loadAnalytics();
 }
- 
+
 // ═══════════════════════════════════════════
 // SSE
 // ═══════════════════════════════════════════
@@ -905,7 +1015,7 @@ function connectSSE() {
   sse.onerror = () => { setLive(false); setTimeout(connectSSE, 4000); };
 }
 function setLive(ok) { document.getElementById('live').className='live'+(ok?' on':''); }
- 
+
 // ═══════════════════════════════════════════
 // CARGA
 // ═══════════════════════════════════════════
@@ -918,11 +1028,11 @@ async function loadSessions() {
   } catch { loadLocalDemo(); }
   connectSSE();
 }
- 
+
 function loadLocalDemo() {
   const iso = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString(); };
   const fmtT = iso => new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
- 
+
   const mkS = (id,phone,name,av,flow,status,msgs,revs,hist,waName,agName,agCol) => ({
     sessionId:id,phone,name,avatar:av,flow,status,
     unread:status==='active'&&revs.length===0,
@@ -938,14 +1048,14 @@ function loadLocalDemo() {
     sessionHistory:hist,
     qualityTimeline:revs.map((r,i)=>({quality:r[0],note:r[1],agentName:agName,agentColor:agCol,createdAt:iso(14-i*3)})),
   });
- 
+
   const hMG=[{id:10,quality:'alta',status:'closed',startedAt:iso(15),reviewedAt:iso(14),preview:'Compré el X300',sessionNote:'Compra cerrada',msgCount:3,reviewCount:1,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'},{id:11,quality:'media',status:'closed',startedAt:iso(8),reviewedAt:iso(7),preview:'Duda envío',sessionNote:'',msgCount:2,reviewCount:2,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'}];
   const hCL=[{id:20,quality:'alta',status:'closed',startedAt:iso(20),reviewedAt:iso(19),preview:'Pedido #3210',sessionNote:'VIP',msgCount:2,reviewCount:1,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'}];
   const hAM=[{id:30,quality:'baja',status:'closed',startedAt:iso(12),reviewedAt:iso(11),preview:'k',sessionNote:'Sin interés',msgCount:2,reviewCount:1,lastQuality:'baja',agentName:'Clara',waName:'WA Clara'},{id:31,quality:'media',status:'closed',startedAt:iso(3),reviewedAt:iso(2),preview:'¿Cuánto?',sessionNote:'',msgCount:3,reviewCount:2,lastQuality:'media',agentName:'Clara',waName:'WA Clara'}];
- 
+
   const isAngel = me?.username==='angel'||me?.role==='admin';
   const isClara = me?.username==='clara'||me?.role==='admin';
- 
+
   const all = [
     ...(isAngel?[
       mkS(1,'34612345678','María García','MG','cliente','active',[['in','¡Hola! ¿Stock del X300?']],[],hMG,'WA Ángel','Ángel','#00e5a0'),
@@ -966,7 +1076,7 @@ function loadLocalDemo() {
   ];
   all.forEach(c=>sessions[c.sessionId]=c);
 }
- 
+
 // ═══════════════════════════════════════════
 // RENDER LISTA
 // ═══════════════════════════════════════════
@@ -977,7 +1087,7 @@ function ftag(flow) {
   return `<span class="ft ${m[flow]||'ft-c'}">${l[flow]||flow}</span>`;
 }
 function qbadge(q) { return q?`<span class="qbadge qb-${q}">${q.toUpperCase()}</span>`:''; }
- 
+
 function renderList() {
   const items = Object.values(sessions).filter(c => {
     if (tabF==='active' && c.status!=='active') return false;
@@ -995,25 +1105,25 @@ function renderList() {
     if (a.status!==b.status) return a.status==='active'?-1:1;
     return (b.lastMsgAt||'').localeCompare(a.lastMsgAt||'');
   });
- 
+
   const el=document.getElementById('conv-list');
   if (!items.length) { el.innerHTML='<div style="padding:28px;text-align:center;font-size:12px;color:var(--t3)">Sin conversaciones</div>'; return; }
- 
+
   el.innerHTML = items.map(c => {
     const lq = c.lastQuality;  // calidad de la última revisión (la más reciente)
     const totalRevs = (c.reviewCount||0) + (c.sessionHistory||[]).reduce((s,h)=>s+(h.reviewCount||0),0);
- 
+
     // Etiqueta de calidad actual — grande y siempre visible si existe
     const qualLabel = lq
       ? `<span class="ci-qual-current cqc-${lq}">● ${lq.toUpperCase()}</span>`
       : (c.status==='active' ? `<span style="font-size:10px;color:var(--t3);margin-top:3px;display:inline-block">Sin revisar</span>` : '');
- 
+
     // Mini historial de revisiones anteriores como puntitos
     const allRevDots = [...(c.sessionHistory||[]).map(h=>h.lastQuality||'act'), ...(c.reviews||[]).map(r=>r.quality)];
     const dotsRow = allRevDots.length
       ? `<div class="rev-dots">${allRevDots.slice(-10).map(q=>`<span class="rd ${q||'act'}" title="${q||'activa'}"></span>`).join('')}<span class="rd-lbl">${totalRevs} rev. total</span></div>`
       : '';
- 
+
     return `<div class="ci ${c.sessionId===activeId?'on':''}" onclick="openConv(${c.sessionId})">
       <div class="ci-r1">
         <span class="ci-name">
@@ -1033,13 +1143,13 @@ function renderList() {
     </div>`;
   }).join('');
 }
- 
+
 function updatePip() {
   const n=Object.values(sessions).filter(c=>c.unread&&c.status==='active').length;
   const el=document.getElementById('upip');
   el.style.display=n?'flex':'none'; el.textContent=n>9?'9+':n;
 }
- 
+
 // ═══════════════════════════════════════════
 // CHAT
 // ═══════════════════════════════════════════
@@ -1056,7 +1166,7 @@ function openConv(id) {
   authFetch(`/api/sessions/${id}/read`,{method:'POST'}).catch(()=>{});
   c.unread=false; updatePip();
 }
- 
+
 function renderMsgs(c) {
   const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
   const lq=c.lastQuality;
@@ -1071,7 +1181,7 @@ function renderMsgs(c) {
         ${c.reviewCount>0?`· <span style="color:var(--t3)">${c.reviewCount} rev.</span>`:''}
       </p>
     </div>`;
- 
+
   const el=document.getElementById('msgs');
   const msgs = c.messages || [];
   let lastDay = null;
@@ -1086,7 +1196,7 @@ function renderMsgs(c) {
     }
     // Hora del mensaje — usar created_at si existe, si no usar time
     const timeLabel = msgDate ? fmtTime(msgDate) : (m.time || '');
- 
+
     if (m.dir==='system') {
       const qm=m.text.match(/·\s*(ALTA|MEDIA|BAJA)/i);
       const q=qm?qm[1].toLowerCase():null;
@@ -1098,13 +1208,13 @@ function renderMsgs(c) {
   }).join('');
   el.scrollTop=el.scrollHeight;
 }
- 
+
 function renderInfo(c) {
   const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
   const hist=c.sessionHistory||[];
   const revs=c.reviews||[];
   const timeline=c.qualityTimeline||[];
- 
+
   // Revisiones de esta sesión — etiqueta grande, la más reciente marcada como "Actual"
   const revsHTML = revs.length
     ? revs.map((r, i) => {
@@ -1120,7 +1230,7 @@ function renderInfo(c) {
         </div>`;
       }).join('')
     : '<p style="font-size:11px;color:var(--t3);padding:4px 0">Sin revisiones todavía · pulsa "Añadir revisión"</p>';
- 
+
   // Evolución calidad (timeline global del contacto)
   const maxEvo=Math.max(timeline.length,1);
   const evoHTML=timeline.length?`
@@ -1130,7 +1240,7 @@ function renderInfo(c) {
         return `<div class="evo-seg" style="background:${r.quality==='alta'?'var(--G)':r.quality==='media'?'var(--A)':'var(--R)'};height:${h}px;flex:1" title="${r.quality.toUpperCase()} · ${fmtDate(r.createdAt)}"></div>`;
       }).join('')}
     </div>`:'';
- 
+
   // Historial sesiones
   const histHTML=hist.length
     ?hist.map(h=>`
@@ -1143,7 +1253,7 @@ function renderInfo(c) {
         <div class="hi-meta">${h.msgCount} msgs · ${h.reviewCount||0} rev. · ${esc(h.waName||'')} · ${esc(h.agentName||'')}</div>
       </div>`).join('')
     :'<p style="font-size:11px;color:var(--t3)">Primera sesión de este contacto</p>';
- 
+
   document.getElementById('ip').innerHTML=`
     <div>
       <div class="iph">Contacto</div>
@@ -1172,7 +1282,7 @@ function renderInfo(c) {
       <button class="ip-save" onclick="saveNote('${c.phone}')">Guardar nota</button>
     </div>`;
 }
- 
+
 function resetChat() {
   activeId=null;
   document.getElementById('ch-c').innerHTML='<p style="color:var(--t3);font-size:12px">Selecciona una conversación</p>';
@@ -1181,7 +1291,7 @@ function resetChat() {
   document.getElementById('in-zone').style.display='none';
   document.getElementById('ip').innerHTML='<div class="iph">Info</div><p style="font-size:11px;color:var(--t3)">Selecciona una conversación</p>';
 }
- 
+
 // ═══════════════════════════════════════════
 // MODAL REVISIÓN
 // ═══════════════════════════════════════════
@@ -1208,23 +1318,23 @@ function openModal() {
   } else pr.style.display='none';
   document.getElementById('ov').classList.add('show');
 }
- 
+
 function closeModal() { document.getElementById('ov').classList.remove('show'); pendingId=null; selQual=null; }
- 
+
 function selQ(q) {
   selQual=q;
   document.querySelectorAll('.qcard').forEach(el=>el.classList.remove('sel'));
   document.querySelector(`.qc-${q==='alta'?'A':q==='media'?'M':'B'}`).classList.add('sel');
   document.getElementById('m-ok').disabled=false;
 }
- 
+
 async function confirmReview() {
   if (!selQual||!pendingId) return;
   const id = pendingId;
   const note = document.getElementById('m-note').value.trim();
   const quality = selQual;
   closeModal();
- 
+
   // 1. Actualizar estado local SIEMPRE e INMEDIATAMENTE
   const c = sessions[id];
   if (c) {
@@ -1243,7 +1353,7 @@ async function confirmReview() {
       time: nowTime()
     }];
   }
- 
+
   // 2. Refrescar UI inmediatamente
   renderList();
   updatePip();
@@ -1252,7 +1362,7 @@ async function confirmReview() {
     renderInfo(sessions[id]);
   }
   toast(`📋 Revisión añadida · ${quality.toUpperCase()}`);
- 
+
   // 3. Guardar en backend en segundo plano (sin bloquear la UI)
   try {
     const r = await authFetch(`/api/sessions/${id}/review`, {
@@ -1268,7 +1378,7 @@ async function confirmReview() {
     }
   } catch { /* Sin backend — la actualización local ya está hecha */ }
 }
- 
+
 async function closeSession() {
   if (!activeId) return;
   try {
@@ -1286,7 +1396,7 @@ async function closeSession() {
   document.getElementById('btn-close').style.display='none';
   toast('Sesión cerrada');
 }
- 
+
 // ═══════════════════════════════════════════
 // FILTROS
 // ═══════════════════════════════════════════
@@ -1303,7 +1413,7 @@ function setQF(q,el) {
   renderList();
 }
 function setSearch(v) { srch=v.toLowerCase(); renderList(); }
- 
+
 // ═══════════════════════════════════════════
 // SEND
 // ═══════════════════════════════════════════
@@ -1322,14 +1432,14 @@ async function sendMsg() {
 }
 function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
 function tpl(t){document.getElementById('msg-in').value=t;document.getElementById('msg-in').focus();}
- 
+
 async function saveNote(phone) {
   const note=document.getElementById('ip-note')?.value||'';
   try { await authFetch(`/api/contacts/${phone}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})}); } catch {}
   Object.values(sessions).filter(c=>c.phone===phone).forEach(c=>c.contactNote=note);
   toast('📝 Nota guardada');
 }
- 
+
 // ═══════════════════════════════════════════
 // ANALÍTICA
 // ═══════════════════════════════════════════
@@ -1368,7 +1478,7 @@ async function loadAnalytics() {
   } catch { data=buildLocalAnalytics(); }
   renderAnalytics(data);
 }
- 
+
 function buildLocalAnalytics() {
   const all=Object.values(sessions);
   const byQ={alta:0,media:0,baja:0};
@@ -1388,9 +1498,9 @@ function buildLocalAnalytics() {
     reviewHistory:all.flatMap(c=>(c.reviews||[]).map(r=>({...r,phone:c.phone,name:c.name,flow:c.flow,sessionId:c.sessionId,agentName:r.agentName}))).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')),
   };
 }
- 
+
 function setAF(f,el){afF=f;document.querySelectorAll('.afb').forEach(b=>b.classList.remove('on'));el.classList.add('on');loadAnalytics();}
- 
+
 function renderAnalytics(d) {
   document.getElementById('k-act').textContent=d.summary.active_sessions||0;
   document.getElementById('k-con').textContent=d.summary.total_contacts||0;
@@ -1399,39 +1509,39 @@ function renderAnalytics(d) {
   document.getElementById('k-alt').textContent=d.byQuality?.alta||0;
   document.getElementById('k-med').textContent=d.byQuality?.media||0;
   document.getElementById('k-baj').textContent=d.byQuality?.baja||0;
- 
+
   const G='#00e5a0',A='#f5a623',R='#ff5757',GR='rgba(255,255,255,.05)';
   Chart.defaults.color='#3e4260'; Chart.defaults.font.family="'Sora',sans-serif";
- 
+
   const days=d.qualityPerDay||[];
   const labels=days.map(r=>r.day?.slice(5));
   const mkDs=(q,col)=>({label:q.charAt(0).toUpperCase()+q.slice(1),data:(afF==='all'||afF===q)?days.map(r=>r[q]||0):days.map(()=>0),borderColor:col,backgroundColor:col.replace('rgb','rgba').replace(')',',0.08)'),fill:true,tension:.4,pointRadius:2,borderWidth:2});
   const dsets=[mkDs('alta',G),mkDs('media',A),mkDs('baja',R)].filter(ds=>afF==='all'||afF===ds.label.toLowerCase());
   mkChart('ch-d',{type:'line',data:{labels,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{color:GR},ticks:{maxTicksLimit:10,font:{size:10}}},y:{grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}});
- 
+
   const qd=afF==='all'?[d.byQuality?.alta||0,d.byQuality?.media||0,d.byQuality?.baja||0]:afF==='alta'?[d.byQuality?.alta||0,0,0]:afF==='media'?[0,d.byQuality?.media||0,0]:[0,0,d.byQuality?.baja||0];
   mkChart('ch-q',{type:'doughnut',data:{labels:['Alta','Media','Baja'],datasets:[{data:qd,backgroundColor:[G,A,R],borderWidth:0,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:12,font:{size:10}}}}}});
- 
+
   // Tabla por agente
   const byAg=d.byAgent||{};
   const agNames=Object.keys(byAg);
   document.getElementById('ag-chart-lbl').textContent=me.role==='admin'?'todos los agentes':'';
   const maxAg=Math.max(...agNames.map(n=>(byAg[n].alta||0)+(byAg[n].media||0)+(byAg[n].baja||0)),1);
   document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);return`<tr><td>${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td><span class="mbar" style="background:var(--G);width:${Math.round(((v.alta||0)/maxAg)*50)}px"></span><span class="mbar" style="background:var(--A);width:${Math.round(((v.media||0)/maxAg)*50)}px;margin-left:2px"></span><span class="mbar" style="background:var(--R);width:${Math.round(((v.baja||0)/maxAg)*50)}px;margin-left:2px"></span></td></tr>`}).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
- 
+
   // Top contactos
   const tops=(d.topContacts||[]);
   document.querySelector('#top-t tbody').innerHTML=tops.length?tops.map(c=>`<tr><td class="nm">${esc(c.name||c.phone)}</td><td class="mn">${c.sessions||0}</td><td class="mn" style="color:var(--G)">${c.altas||0}</td><td class="mn" style="color:var(--A)">${c.medias||0}</td><td class="mn" style="color:var(--R)">${c.bajas||0}</td></tr>`).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
- 
+
   // Historial revisiones
   document.getElementById('af-lbl').textContent=afF==='all'?'':` · ${afF.toUpperCase()}`;
   const hist=(d.reviewHistory||[]).filter(r=>afF==='all'||r.quality===afF);
   const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
   document.getElementById('hist-tb').innerHTML=hist.length?hist.map(r=>`<tr><td class="nm">${esc(r.name||r.phone)}</td><td class="mn" style="color:${r.agentColor||'var(--t2)'}">${esc(r.agentName||'')}</td><td><span class="qbadge qb-${r.quality}">${r.quality?.toUpperCase()||'—'}</span></td><td style="color:var(--t3);font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td><td class="mn">#${r.sessionId||'?'}</td><td class="mn">${fmtDate(r.createdAt)}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--t3);padding:16px 10px">Sin revisiones para este filtro</td></tr>';
- 
+
   renderNoReplyAndRates(d);
 }
- 
+
 // ── Sin respuesta y tasas ─────────────────────────────────
 function renderNoReplyAndRates(d) {
   const noReply = d.noReply || [];
@@ -1451,7 +1561,7 @@ function renderNoReplyAndRates(d) {
         </tr>`;
       }).join('')
     : '<tr><td colspan="5" style="color:var(--t3);padding:14px 10px">Sin contactos pendientes · todo al día 👍</td></tr>';
- 
+
   const G='#00e5a0', R='#ff5757';
   const rr = d.responseRate || {};
   function renderRRCard(canvasId, repId, nrpId, pctId, replied, notReplied) {
@@ -1468,7 +1578,7 @@ function renderNoReplyAndRates(d) {
   }
   if (rr.week)  renderRRCard('rr-week-chart',  'rr-w-rep','rr-w-nrp','rr-w-pct',  rr.week.replied,  rr.week.notReplied);
   if (rr.month) renderRRCard('rr-month-chart', 'rr-m-rep','rr-m-nrp','rr-m-pct', rr.month.replied, rr.month.notReplied);
- 
+
   const GR = 'rgba(255,255,255,.05)';
   const weekly = d.weeklyRate || [];
   mkChart('ch-weekly',{type:'bar',data:{
@@ -1481,7 +1591,7 @@ function renderNoReplyAndRates(d) {
       scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},
       plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
   });
- 
+
   const monthly = d.monthlyRate || [];
   mkChart('ch-monthly',{type:'bar',data:{
     labels:monthly.map(r=>r.month),
@@ -1494,7 +1604,7 @@ function renderNoReplyAndRates(d) {
       plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
   });
 }
- 
+
 // ── Abrir conversación desde analítica ────────────────────
 function openConvById(sessionId) {
   const btn = document.getElementById('nb-c');
@@ -1507,10 +1617,10 @@ function openConvById(sessionId) {
     }).catch(()=>toast('No se pudo abrir la conversación'));
   }
 }
- 
- 
+
+
 function mkChart(id,cfg){if(charts[id])charts[id].destroy();const ctx=document.getElementById(id)?.getContext('2d');if(!ctx)return;charts[id]=new Chart(ctx,cfg);}
- 
+
 // ═══════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════
@@ -1519,7 +1629,7 @@ function authFetch(url,opts={}) {
 }
 function esc(s=''){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
 function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});}
- 
+
 // Convierte ISO a fecha en zona Madrid
 function toMadrid(iso) {
   if (!iso) return null;
@@ -1577,7 +1687,18 @@ async function resetDB() {
     msg.style.color = 'var(--R)';
   }
 }
- 
+
+async function disable2FA(agentId) {
+  if (!confirm('¿Seguro que quieres desactivar el 2FA de este agente? Tendrá que volver a configurarlo la próxima vez que inicie sesión.')) return;
+  try {
+    const r = await authFetch('/api/admin/agents/'+agentId+'/disable-2fa', { method: 'POST' });
+    const d = await r.json();
+    if (d.error) throw new Error(d.error);
+    toast('2FA desactivado correctamente');
+    loadAdminPanel();
+  } catch(e) { toast('Error: ' + e.message); }
+}
+
 async function loadAdminPanel() {
   if (me.role !== 'admin') return;
   try {
@@ -1588,7 +1709,7 @@ async function loadAdminPanel() {
     document.getElementById('adm-agents-grid').innerHTML = `<p style="color:var(--R);font-size:12px">Error: ${esc(e.message)}</p>`;
   }
 }
- 
+
 function renderAdminAgents(agents) {
   const grid = document.getElementById('adm-agents-grid');
   if (!agents.length) { grid.innerHTML='<p style="color:var(--t3);font-size:12px">No hay agentes</p>'; return; }
@@ -1608,10 +1729,16 @@ function renderAdminAgents(agents) {
         <button class="adm-pw-btn" id="pw-btn-${a.id}" onclick="changePassword(${a.id})">Cambiar</button>
       </div>
       <div class="adm-pw-msg" id="pw-msg-${a.id}"></div>
+      <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between">
+        <span style="font-size:11px;color:${a.totp_enabled?'var(--G)':'var(--t3)'}">
+          ${a.totp_enabled ? '🔐 2FA activado' : '⚠️ 2FA no configurado'}
+        </span>
+        ${a.totp_enabled ? `<button onclick="disable2FA(${a.id})" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid rgba(255,87,87,.3);background:transparent;color:var(--R);cursor:pointer">Desactivar 2FA</button>` : ''}
+      </div>
     </div>
   `).join('');
 }
- 
+
 async function changePassword(agentId) {
   const input = document.getElementById('pw-input-' + agentId);
   const btn   = document.getElementById('pw-btn-'   + agentId);
@@ -1634,8 +1761,7 @@ async function changePassword(agentId) {
     btn.disabled=false; btn.textContent='Cambiar';
   }
 }
- 
+
 </script>
 </body>
 </html>
- 
