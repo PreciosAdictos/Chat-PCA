@@ -21,6 +21,9 @@ const rateLimit    = require('express-rate-limit');
 
 const app = express();
 
+// Railway usa proxy — necesario para rate limiting y IPs correctas
+app.set('trust proxy', 1);
+
 // ─── Cabeceras de seguridad HTTP (Helmet) ─────────────────
 app.use(helmet({
   contentSecurityPolicy: false,
@@ -56,13 +59,44 @@ const apiLimiter = rateLimit({
   standardHeaders: true, legacyHeaders: false,
 });
 const webhookLimiter = rateLimit({
-  windowMs: 60 * 1000, max: 300,
+  windowMs: 60 * 1000, max: 2000,
   message: { error: 'Rate limit excedido en webhook.' },
 });
 
 app.use('/api/', apiLimiter);
 app.use('/messages/', webhookLimiter);
 app.use('/webhook', webhookLimiter);
+
+// ─── Cola de mensajes entrantes ───────────────────────────
+// Procesa hasta 50 mensajes simultáneos, el resto espera en cola
+const messageQueue   = [];
+let   activeWorkers  = 0;
+const MAX_WORKERS    = 50;
+
+function enqueueMessage(task) {
+  return new Promise((resolve, reject) => {
+    messageQueue.push({ task, resolve, reject });
+    processQueue();
+  });
+}
+
+function processQueue() {
+  while (activeWorkers < MAX_WORKERS && messageQueue.length > 0) {
+    const { task, resolve, reject } = messageQueue.shift();
+    activeWorkers++;
+    task()
+      .then(resolve)
+      .catch(reject)
+      .finally(() => { activeWorkers--; processQueue(); });
+  }
+}
+
+// Log del estado de la cola cada 30s si hay actividad
+setInterval(() => {
+  if (messageQueue.length > 0 || activeWorkers > 0) {
+    console.log(`📊 Cola: ${messageQueue.length} esperando, ${activeWorkers} procesando`);
+  }
+}, 30000);
 
 // ─── Entorno ──────────────────────────────────────────────
 const IS_TEST = (process.env.NODE_ENV || 'production') === 'test';
@@ -823,8 +857,8 @@ app.get('/api/analytics', auth, async (req, res) => {
       get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`, params),
       all(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY r.quality`, params),
       all(`SELECT a.name, a.color, r.quality, COUNT(*) n FROM reviews r JOIN agents a ON a.id=r.agent_id JOIN sessions s ON s.id=r.session_id WHERE a.role='agent' ${rc} ${rt} GROUP BY a.name,a.color,r.quality`, params),
-      all(`SELECT s.started_at::date day, COUNT(*) n FROM sessions s WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY day ORDER BY day`, params),
-      all(`SELECT r.created_at::date day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY day,r.quality ORDER BY day`, params),
+      all(`SELECT s.started_at::date AS day, COUNT(*) n FROM sessions s WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY s.started_at::date ORDER BY s.started_at::date`, params),
+      all(`SELECT r.created_at::date AS day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY r.created_at::date,r.quality ORDER BY r.created_at::date`, params),
       all(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions,COUNT(CASE WHEN r.quality='alta' THEN 1 END) altas,COUNT(CASE WHEN r.quality='media' THEN 1 END) medias,COUNT(CASE WHEN r.quality='baja' THEN 1 END) bajas FROM contacts c JOIN sessions s ON s.phone=c.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY c.phone,c.name ORDER BY sessions DESC LIMIT 10`, params),
       all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, params),
     ]);
