@@ -134,6 +134,7 @@ async function initDB() {
     name         TEXT NOT NULL DEFAULT 'Desconocido',
     avatar       TEXT DEFAULT '??',
     email        TEXT DEFAULT '',
+    client_id    TEXT DEFAULT '',
     contact_note TEXT DEFAULT '',
     tags         TEXT DEFAULT '[]',
     created_at   TEXT DEFAULT (datetime('now'))
@@ -187,8 +188,9 @@ async function initDB() {
   ]) await run(idx);
 
   console.log('✅ Base de datos lista');
-  // Migración: añadir columna email si no existe
+  // Migraciones: añadir columnas si no existen
   await run("ALTER TABLE contacts ADD COLUMN email TEXT DEFAULT ''").catch(() => {});
+  await run("ALTER TABLE contacts ADD COLUMN client_id TEXT DEFAULT ''").catch(() => {});
   await seedAgents();
 }
 
@@ -269,6 +271,7 @@ async function enrichSession(row) {
     name:            row.name || row.phone,
     avatar:          row.avatar || mkAvatar(row.name),
     email:           row.email || '',
+    clientId:        row.client_id || '',
     flow:            row.flow || 'cliente',
     status:          row.status,
     unread:          row.unread === 1,
@@ -300,7 +303,7 @@ async function getSessionRows(agentId, from, to) {
   const toClause   = to   ? `AND date(s.last_message_at) <= '${to}'`   : '';
   const agentClause= agentId ? `AND s.agent_id=${agentId}` : '';
   return all(`
-    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,
+    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,c.client_id,
            a.name agent_name,a.color agent_color,w.display_name wa_name
     FROM sessions s
     JOIN contacts c ON c.phone=s.phone
@@ -451,20 +454,20 @@ app.post('/webhook', async (req, res) => {
 });
 
 // ─── Helpers de sesión ────────────────────────────────────
-async function upsertContact(phone, name, email) {
+async function upsertContact(phone, name, email, clientId) {
   const existing = await get('SELECT * FROM contacts WHERE phone=?', [phone]);
   if (!existing) {
-    await run('INSERT INTO contacts (phone,name,avatar,email) VALUES (?,?,?,?)',
-      [phone, name||phone, mkAvatar(name||phone), email||'']);
+    await run('INSERT INTO contacts (phone,name,avatar,email,client_id) VALUES (?,?,?,?,?)',
+      [phone, name||phone, mkAvatar(name||phone), email||'', clientId||'']);
   } else {
-    // Actualizar nombre si viene uno nuevo y es diferente al teléfono
     if (name && name !== phone && name !== existing.name) {
-      await run('UPDATE contacts SET name=?,avatar=? WHERE phone=?',
-        [name, mkAvatar(name), phone]);
+      await run('UPDATE contacts SET name=?,avatar=? WHERE phone=?', [name, mkAvatar(name), phone]);
     }
-    // Actualizar email si viene uno nuevo
     if (email && !existing.email) {
       await run('UPDATE contacts SET email=? WHERE phone=?', [email, phone]);
+    }
+    if (clientId && !existing.client_id) {
+      await run('UPDATE contacts SET client_id=? WHERE phone=?', [clientId, phone]);
     }
   }
 }
@@ -635,7 +638,7 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
     const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
     const dir   = direction==='incoming' ? 'in' : 'bot';
 
-    await upsertContact(clean, name, email);
+    await upsertContact(clean, name, email, client_id);
 
     // Determinar agente y cuenta WA
     let wa = null, agentId = null;
