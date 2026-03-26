@@ -7,7 +7,7 @@
  * Integración   : Sistema externo AWS via POST /messages/incoming
  * ═══════════════════════════════════════════════════════
  */
-
+ 
 require('dotenv').config();
 const express      = require('express');
 const cors         = require('cors');
@@ -18,9 +18,9 @@ const sqlite3      = require('sqlite3').verbose();
 const fs           = require('fs');
 const helmet       = require('helmet');
 const rateLimit    = require('express-rate-limit');
-
+ 
 const app = express();
-
+ 
 // ─── Cabeceras de seguridad HTTP (Helmet) ─────────────────
 // CSP desactivado — el HTML usa eventos inline (onclick, onkeydown) y CDN externos
 // El resto de protecciones de Helmet siguen activas (X-Frame-Options, HSTS, etc.)
@@ -28,11 +28,11 @@ app.use(helmet({
   contentSecurityPolicy: false,
   crossOriginEmbedderPolicy: false, // Necesario para SSE
 }));
-
+ 
 // ─── CORS restringido ─────────────────────────────────────
 const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
   .split(',').map(o => o.trim()).filter(Boolean);
-
+ 
 app.use(cors({
   origin: (origin, cb) => {
     // Permitir sin origin (Railway health checks, mismo dominio)
@@ -42,11 +42,11 @@ app.use(cors({
   },
   credentials: true,
 }));
-
+ 
 // ─── Límite de tamaño del body (50 KB) ───────────────────
 app.use(express.json({ limit: '50kb' }));
 app.use(express.static(path.join(__dirname, 'public')));
-
+ 
 // ─── Rate limiting ────────────────────────────────────────
 // Login: máximo 10 intentos por IP cada 15 minutos
 const loginLimiter = rateLimit({
@@ -56,7 +56,7 @@ const loginLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
+ 
 // API general: máximo 200 peticiones por IP cada 1 minuto
 const apiLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -65,21 +65,21 @@ const apiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
+ 
 // Webhooks externos: máximo 300 por minuto
 const webhookLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 300,
   message: { error: 'Rate limit excedido en webhook.' },
 });
-
+ 
 app.use('/api/', apiLimiter);
 app.use('/messages/', webhookLimiter);
 app.use('/webhook', webhookLimiter);
-
+ 
 // ─── Entorno ──────────────────────────────────────────────
 const IS_TEST = (process.env.NODE_ENV || 'production') === 'test';
-
+ 
 if (IS_TEST) {
   console.log('⚠️  Arrancando en modo TEST — datos de prueba, no usar en producción');
 } else {
@@ -91,23 +91,23 @@ if (IS_TEST) {
     process.exit(1);
   }
 }
-
+ 
 const PORT        = process.env.PORT || 3000;
 const JWT_SECRET  = process.env.JWT_SECRET  || (IS_TEST ? 'test_secret_inseguro' : '');
 const EXT_API_KEY = process.env.EXTERNAL_API_KEY || (IS_TEST ? 'test_api_key' : '');
 const EXT_SEND    = process.env.EXTERNAL_SEND_URL || '';
-
+ 
 // ─── Base de datos ────────────────────────────────────────
 const dbDir  = path.join(__dirname, 'db');
 if (!fs.existsSync(dbDir)) fs.mkdirSync(dbDir, { recursive: true });
 const dbFile = IS_TEST ? 'wa_test.db' : 'wa.db';
 const db = new sqlite3.Database(path.join(dbDir, dbFile));
-
+ 
 // Wrapper para usar promesas con sqlite3
 const run  = (sql, p=[]) => new Promise((res,rej) => db.run(sql,p, function(e){ e?rej(e):res(this); }));
 const get  = (sql, p=[]) => new Promise((res,rej) => db.get(sql,p,(e,r)=> e?rej(e):res(r)));
 const all  = (sql, p=[]) => new Promise((res,rej) => db.all(sql,p,(e,r)=> e?rej(e):res(r)));
-
+ 
 // ─── Inicializar tablas ───────────────────────────────────
 async function initDB() {
   await run('PRAGMA foreign_keys = ON');
@@ -133,6 +133,7 @@ async function initDB() {
     phone        TEXT PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT 'Desconocido',
     avatar       TEXT DEFAULT '??',
+    email        TEXT DEFAULT '',
     contact_note TEXT DEFAULT '',
     tags         TEXT DEFAULT '[]',
     created_at   TEXT DEFAULT (datetime('now'))
@@ -167,7 +168,7 @@ async function initDB() {
     time_label TEXT,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
-
+ 
   // Tabla para rastrear intentos de login fallidos
   await run(`CREATE TABLE IF NOT EXISTS login_attempts (
     id         INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -175,7 +176,7 @@ async function initDB() {
     ip         TEXT NOT NULL,
     created_at TEXT DEFAULT (datetime('now'))
   )`);
-
+ 
   // Índices
   for (const idx of [
     'CREATE INDEX IF NOT EXISTS idx_sess_phone  ON sessions(phone)',
@@ -184,11 +185,13 @@ async function initDB() {
     'CREATE INDEX IF NOT EXISTS idx_msg_sess    ON messages(session_id)',
     'CREATE INDEX IF NOT EXISTS idx_rev_sess    ON reviews(session_id)',
   ]) await run(idx);
-
+ 
   console.log('✅ Base de datos lista');
+  // Migración: añadir columna email si no existe
+  await run("ALTER TABLE contacts ADD COLUMN email TEXT DEFAULT ''").catch(() => {});
   await seedAgents();
 }
-
+ 
 // ─── Crear agentes iniciales ──────────────────────────────
 async function seedAgents() {
   const agentsList = [
@@ -224,12 +227,12 @@ async function seedAgents() {
     }
   }
 }
-
+ 
 // ─── Helpers ─────────────────────────────────────────────
 const nowTime  = () => new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Madrid' });
 const mkAvatar = n  => (n||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
 const safeJson = v  => { try { return JSON.parse(v||'[]'); } catch { return []; } };
-
+ 
 function extractText(msg) {
   if (msg.text?.body)   return msg.text.body;
   if (msg.image)        return '[📷 Imagen]';
@@ -242,7 +245,7 @@ function extractText(msg) {
   if (msg.interactive?.list_reply)   return msg.interactive.list_reply.title;
   return `[${msg.type||'msg'}]`;
 }
-
+ 
 function periodDates(period) {
   const now   = new Date();
   const today = now.toISOString().slice(0, 10);
@@ -252,19 +255,20 @@ function periodDates(period) {
   if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-93); return { from: d.toISOString().slice(0,10), to: today }; }
   return null;
 }
-
+ 
 async function enrichSession(row) {
   const msgs    = await all('SELECT * FROM messages WHERE session_id=? ORDER BY id ASC', [row.id]);
   const reviews = await all('SELECT r.*,a.name agent_name,a.color agent_color FROM reviews r JOIN agents a ON a.id=r.agent_id WHERE r.session_id=? ORDER BY r.id ASC', [row.id]);
   const history = await all('SELECT s.*,a.name agent_name,a.color agent_color,w.display_name wa_name FROM sessions s JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id WHERE s.phone=? AND s.id!=? ORDER BY s.id DESC', [row.phone, row.id]);
   const allRevs = await all('SELECT r.*,a.name agent_name,a.color agent_color FROM reviews r JOIN agents a ON a.id=r.agent_id WHERE r.session_id IN (SELECT id FROM sessions WHERE phone=?) ORDER BY r.created_at DESC', [row.phone]);
   const lastRev = reviews[reviews.length-1] || null;
-
+ 
   return {
     sessionId:       row.id,
     phone:           row.phone,
     name:            row.name || row.phone,
     avatar:          row.avatar || mkAvatar(row.name),
+    email:           row.email || '',
     flow:            row.flow || 'cliente',
     status:          row.status,
     unread:          row.unread === 1,
@@ -280,7 +284,7 @@ async function enrichSession(row) {
     reviews:         reviews.map(r => ({ id:r.id, quality:r.quality, note:r.note, agentName:r.agent_name, agentColor:r.agent_color, createdAt:r.created_at })),
     lastQuality:     lastRev?.quality || null,
     reviewCount:     reviews.length,
-    messages:        msgs.map(m => ({ dir:m.direction, text:m.body, time:m.time_label||'', id:m.meta_id })),
+    messages:        msgs.map(m => ({ dir:m.direction, text:m.body, time:m.time_label||'', id:m.meta_id, created_at:m.created_at })),
     sessionHistory:  await Promise.all(history.map(async s => {
       const revs = await all('SELECT * FROM reviews WHERE session_id=?', [s.id]);
       const cnt  = await get('SELECT COUNT(*) n FROM messages WHERE session_id=?', [s.id]);
@@ -290,13 +294,13 @@ async function enrichSession(row) {
     qualityTimeline: allRevs.map(r => ({ quality:r.quality, note:r.note, agentName:r.agent_name, agentColor:r.agent_color, createdAt:r.created_at })),
   };
 }
-
+ 
 async function getSessionRows(agentId, from, to) {
   const fromClause = from ? `AND date(s.last_message_at) >= '${from}'` : '';
   const toClause   = to   ? `AND date(s.last_message_at) <= '${to}'`   : '';
   const agentClause= agentId ? `AND s.agent_id=${agentId}` : '';
   return all(`
-    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,
+    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,
            a.name agent_name,a.color agent_color,w.display_name wa_name
     FROM sessions s
     JOIN contacts c ON c.phone=s.phone
@@ -306,7 +310,7 @@ async function getSessionRows(agentId, from, to) {
     ORDER BY s.last_message_at DESC
   `);
 }
-
+ 
 // ─── Auth middleware ──────────────────────────────────────
 function auth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
@@ -318,7 +322,7 @@ function adminOnly(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admins' });
   next();
 }
-
+ 
 // ─── SSE ─────────────────────────────────────────────────
 const clients = new Map();
 function broadcastTo(agentId, event, data) {
@@ -327,7 +331,7 @@ function broadcastTo(agentId, event, data) {
     clients.get(k)?.forEach(r => { try { r.write(msg); } catch {} })
   );
 }
-
+ 
 app.get('/events', auth, async (req, res) => {
   res.setHeader('Content-Type',      'text/event-stream');
   res.setHeader('Cache-Control',     'no-cache');
@@ -344,16 +348,16 @@ app.get('/events', auth, async (req, res) => {
   const ping = setInterval(() => res.write(': ping\n\n'), 25000);
   req.on('close', () => { clearInterval(ping); clients.get(key)?.delete(res); });
 });
-
+ 
 // ─── Auth ─────────────────────────────────────────────────
 app.post('/api/auth/login', loginLimiter, async (req, res) => {
   const ip = req.ip || req.connection.remoteAddress || 'unknown';
   try {
     const { username, password } = req.body || {};
     if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
-
+ 
     const user = String(username).toLowerCase().trim().slice(0, 64);
-
+ 
     // Bloqueo por intentos fallidos: máx 5 en 10 minutos por username+IP
     const recentFails = await get(
       `SELECT COUNT(*) n FROM login_attempts WHERE username=? AND ip=? AND created_at > datetime('now','-10 minutes')`,
@@ -363,7 +367,7 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       console.warn(`🔒 Login bloqueado: ${user} desde ${ip} (${recentFails.n} intentos)`);
       return res.status(429).json({ error: 'Cuenta bloqueada temporalmente. Intenta en 10 minutos.' });
     }
-
+ 
     const agent = await get('SELECT * FROM agents WHERE username=?', [user]);
     if (!agent || !bcrypt.compareSync(password, agent.password)) {
       // Registrar intento fallido
@@ -372,10 +376,10 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
       // Mismo mensaje para usuario no encontrado o contraseña incorrecta (no revelar cuál)
       return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
     }
-
+ 
     // Login exitoso — limpiar intentos fallidos
     await run('DELETE FROM login_attempts WHERE username=? AND ip=?', [user, ip]);
-
+ 
     const token = jwt.sign(
       { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color },
       JWT_SECRET,
@@ -387,12 +391,12 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     res.status(500).json({ error: IS_TEST ? e.message : 'Error interno del servidor' });
   }
 });
-
+ 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
-
+ 
 // ─── Info de entorno (público, para el frontend) ──────────
 app.get('/api/env', (req, res) => res.json({ env: IS_TEST ? 'test' : 'production' }));
-
+ 
 // ─── Webhook Meta ─────────────────────────────────────────
 app.get('/webhook/:vt', async (req, res) => {
   const wa = await get('SELECT * FROM wa_accounts WHERE verify_token=?', [req.params.vt]);
@@ -401,14 +405,14 @@ app.get('/webhook/:vt', async (req, res) => {
   if (mode==='subscribe' && token===wa.verify_token) return res.status(200).send(challenge);
   res.sendStatus(403);
 });
-
+ 
 app.get('/webhook', async (req, res) => {
   const { 'hub.mode':mode, 'hub.verify_token':token, 'hub.challenge':challenge } = req.query;
   const wa = token ? await get('SELECT * FROM wa_accounts WHERE verify_token=?', [token]) : null;
   if (wa && mode==='subscribe') return res.status(200).send(challenge);
   res.sendStatus(403);
 });
-
+ 
 async function processWebhook(body, wa) {
   if (body.object !== 'whatsapp_business_account') return;
   for (const entry of (body.entry||[])) {
@@ -430,13 +434,13 @@ async function processWebhook(body, wa) {
     }
   }
 }
-
+ 
 app.post('/webhook/:vt', async (req, res) => {
   res.sendStatus(200);
   const wa = await get('SELECT * FROM wa_accounts WHERE verify_token=?', [req.params.vt]);
   if (wa) processWebhook(req.body, wa);
 });
-
+ 
 app.post('/webhook', async (req, res) => {
   res.sendStatus(200);
   const phoneId = req.body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
@@ -445,23 +449,23 @@ app.post('/webhook', async (req, res) => {
     if (wa) processWebhook(req.body, wa);
   }
 });
-
+ 
 // ─── Helpers de sesión ────────────────────────────────────
 async function upsertContact(phone, name, email) {
   const existing = await get('SELECT * FROM contacts WHERE phone=?', [phone]);
   if (!existing) {
-    await run('INSERT INTO contacts (phone,name,avatar) VALUES (?,?,?)', [phone, name||phone, mkAvatar(name||phone)]);
-  } else if (name && name !== phone) {
-    await run('UPDATE contacts SET name=? WHERE phone=? AND name=phone', [name, phone]);
-  }
-  if (email && existing) {
-    const note = existing.contact_note || '';
-    if (!note.includes(email)) {
-      await run('UPDATE contacts SET contact_note=? WHERE phone=?', [[note, `Email: ${email}`].filter(Boolean).join(' · '), phone]);
+    await run('INSERT INTO contacts (phone,name,avatar,email) VALUES (?,?,?,?)',
+      [phone, name||phone, mkAvatar(name||phone), email||'']);
+  } else {
+    if (name && name !== phone) {
+      await run('UPDATE contacts SET name=? WHERE phone=? AND name=phone', [name, phone]);
+    }
+    if (email && !existing.email) {
+      await run('UPDATE contacts SET email=? WHERE phone=?', [email, phone]);
     }
   }
 }
-
+ 
 async function getOrCreateSession(phone, waId, agentId, flow, preview) {
   const active = await get("SELECT * FROM sessions WHERE phone=? AND wa_account_id=? AND status='active' ORDER BY id DESC LIMIT 1", [phone, waId]);
   if (active) {
@@ -471,7 +475,7 @@ async function getOrCreateSession(phone, waId, agentId, flow, preview) {
   const r = await run('INSERT INTO sessions (phone,wa_account_id,agent_id,flow,preview) VALUES (?,?,?,?,?)', [phone, waId, agentId, flow||'cliente', preview]);
   return await get('SELECT * FROM sessions WHERE id=?', [r.lastID]);
 }
-
+ 
 async function buildEnrichedSession(sessionId) {
   const s = await get(`
     SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,a.name agent_name,a.color agent_color,w.display_name wa_name
@@ -479,7 +483,7 @@ async function buildEnrichedSession(sessionId) {
     WHERE s.id=?`, [sessionId]);
   return s ? enrichSession(s) : null;
 }
-
+ 
 // ─── Sesiones ─────────────────────────────────────────────
 app.get('/api/sessions', auth, async (req, res) => {
   try {
@@ -499,7 +503,7 @@ app.get('/api/sessions', auth, async (req, res) => {
     res.json(enriched);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 app.get('/api/sessions/:id', auth, async (req, res) => {
   try {
     const enriched = await buildEnrichedSession(+req.params.id);
@@ -507,12 +511,12 @@ app.get('/api/sessions/:id', auth, async (req, res) => {
     res.json(enriched);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 app.post('/api/sessions/:id/read', auth, async (req, res) => {
   try { await run('UPDATE sessions SET unread=0 WHERE id=?', [+req.params.id]); res.json({ ok:true }); }
   catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 app.post('/api/sessions/:id/review', auth, async (req, res) => {
   try {
     const { quality, note='' } = req.body;
@@ -527,7 +531,7 @@ app.post('/api/sessions/:id/review', auth, async (req, res) => {
     res.json(enriched);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 app.post('/api/sessions/:id/close', auth, async (req, res) => {
   try {
     const id = +req.params.id;
@@ -540,7 +544,7 @@ app.post('/api/sessions/:id/close', auth, async (req, res) => {
     res.json(enriched);
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 // ─── Contactos ────────────────────────────────────────────
 app.patch('/api/contacts/:phone', auth, async (req, res) => {
   try {
@@ -549,13 +553,13 @@ app.patch('/api/contacts/:phone', auth, async (req, res) => {
     res.json({ ok:true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 // ─── Enviar mensaje ───────────────────────────────────────
 app.post('/api/send', auth, async (req, res) => {
   const { phone, text, sessionId } = req.body;
   if (!phone||!text) return res.status(400).json({ error: 'Faltan phone y text' });
   const clean = phone.replace(/[\s+]/g,'');
-
+ 
   try {
     // Si hay sistema externo configurado, enviar por ahí
     if (EXT_SEND) {
@@ -581,7 +585,7 @@ app.post('/api/send', auth, async (req, res) => {
         if (data.error) return res.status(500).json({ error: data.error.message });
       }
     }
-
+ 
     // Guardar en DB
     const sid = sessionId || (await get("SELECT id FROM sessions WHERE phone=? AND status='active' ORDER BY id DESC LIMIT 1", [clean]))?.id;
     if (sid) {
@@ -594,27 +598,42 @@ app.post('/api/send', auth, async (req, res) => {
     res.json({ success:true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
+// ─── Helper para parsear timestamps en varios formatos ────
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  // Formato DD/MM/YYYY HH:MM:SS o DD/MM/YYYY HH:MM o DD/MM/YYYY
+  const ddmmyyyy = ts.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, hh='00', min='00', ss='00'] = ddmmyyyy;
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+01:00`);
+  }
+  // Formato ISO u otros — dejar que Date lo parsee
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
+ 
 // ─── Integración sistema externo (AWS) ───────────────────
 function externalAuth(req, res, next) {
   const key = req.headers['x-api-key'];
   if (!key || key !== EXT_API_KEY) return res.status(401).json({ error: 'API Key inválida' });
   next();
 }
-
+ 
 // POST /messages/incoming — el sistema AWS nos envía mensajes
 app.post('/messages/incoming', externalAuth, async (req, res) => {
   try {
     const { client_id, name, phone, email, message, timestamp, conversation_id, direction='incoming', flow='cliente', agent: agentHint } = req.body;
     if (!phone||!message) return res.status(400).json({ error: 'Faltan: phone, message' });
-
+ 
     const clean = phone.replace(/[\s+]/g,'');
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
     const dir   = direction==='incoming' ? 'in' : 'bot';
-
+ 
     await upsertContact(clean, name, email);
-
+ 
     // Determinar agente y cuenta WA
     let wa = null, agentId = null;
     if (agentHint) {
@@ -632,18 +651,18 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
       if (wa) agentId = wa.agent_id;
     }
     if (!wa||!agentId) return res.status(500).json({ error: 'No hay cuentas WA configuradas' });
-
+ 
     const session = await getOrCreateSession(clean, wa.id, agentId, flow, text);
     await run('INSERT INTO messages (session_id,phone,direction,body,meta_id,time_label) VALUES (?,?,?,?,?,?)',
       [session.id, clean, dir, text, conversation_id||null, time]);
-
+ 
     const enriched = await buildEnrichedSession(session.id);
     broadcastTo(agentId, 'message', { sessionId:session.id, phone:clean, conv:enriched });
     console.log(`📥 [AWS/${direction}] ${name||clean}: ${text.slice(0,60)}`);
     res.json({ ok:true, session_id:session.id });
   } catch(e) { console.error('/messages/incoming:', e.message); res.status(500).json({ error: e.message }); }
 });
-
+ 
 // POST /messages/outgoing — el sistema AWS confirma un mensaje saliente
 app.post('/messages/outgoing', externalAuth, async (req, res) => {
   try {
@@ -651,8 +670,9 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'Falta message' });
     const clean = phone ? phone.replace(/[\s+]/g,'') : null;
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
-
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+ 
     if (clean) {
       const session = await get("SELECT * FROM sessions WHERE phone=? AND status='active' ORDER BY id DESC LIMIT 1", [clean]);
       if (session) {
@@ -666,19 +686,19 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
     res.json({ ok:true });
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
-
+ 
 // ─── Analítica ────────────────────────────────────────────
 app.get('/api/analytics', auth, async (req, res) => {
   try {
     const aid = req.user.role==='admin' ? (req.query.agent_id?+req.query.agent_id:null) : req.user.id;
-
+ 
     // Sanitizar fechas — solo formato YYYY-MM-DD permitido
     const dateRe = /^\d{4}-\d{2}-\d{2}$/;
     const rawFrom   = req.query.from   || null;
     const rawTo     = req.query.to     || null;
     const rawPeriod = req.query.period || null;
     const validPeriods = ['today','week','month','quarter'];
-
+ 
     let dates = {
       from: rawFrom   && dateRe.test(rawFrom)   ? rawFrom   : null,
       to:   rawTo     && dateRe.test(rawTo)      ? rawTo     : null,
@@ -691,7 +711,7 @@ app.get('/api/analytics', auth, async (req, res) => {
     const tc = dates.to   ? `AND date(s.started_at)<='${dates.to}'`   : '';
     const rc = dates.from ? `AND date(r.created_at)>='${dates.from}'` : '';
     const rt = dates.to   ? `AND date(r.created_at)<='${dates.to}'`   : '';
-
+ 
     const [summary, byQrows, agentRows, sessDay, revDay, topC, noReply] = await Promise.all([
       get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`),
       all(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY r.quality`),
@@ -701,7 +721,7 @@ app.get('/api/analytics', auth, async (req, res) => {
       all(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions,COUNT(CASE WHEN r.quality='alta' THEN 1 END) altas,COUNT(CASE WHEN r.quality='media' THEN 1 END) medias,COUNT(CASE WHEN r.quality='baja' THEN 1 END) bajas FROM contacts c JOIN sessions s ON s.phone=c.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY c.phone ORDER BY sessions DESC LIMIT 10`),
       all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,CAST(julianday('now')-julianday(lm.created_at) AS INTEGER) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND julianday('now')-julianday(lm.created_at)>3 ORDER BY days_waiting DESC`),
     ]);
-
+ 
     const wDates = periodDates('week');
     const mDates = periodDates('month');
     const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
@@ -710,18 +730,18 @@ app.get('/api/analytics', auth, async (req, res) => {
       get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${ac?ac.replace('AND ',''):'1=1'} AND date(s.started_at)>='${mDates.from}' AND date(s.started_at)<='${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`),
       get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${ac?ac.replace('AND ',''):'1=1'} AND date(s.started_at)>='${mDates.from}' AND date(s.started_at)<='${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND julianday('now')-julianday(s.last_message_at)>3`),
     ]);
-
+ 
     const [weeklyRate, monthlyRate] = await Promise.all([
       all(`SELECT strftime('%Y-W%W',s.started_at) week,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=date('now','-90 days') ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY week ORDER BY week ASC`),
       all(`SELECT strftime('%Y-%m',s.started_at) month,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=date('now','-365 days') ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY month ORDER BY month ASC`),
     ]);
-
+ 
     const dayMap = {};
     revDay.forEach(r => { if(!dayMap[r.day]) dayMap[r.day]={alta:0,media:0,baja:0}; dayMap[r.day][r.quality]=r.n; });
     sessDay.forEach(r=> { if(!dayMap[r.day]) dayMap[r.day]={alta:0,media:0,baja:0}; dayMap[r.day].total=r.n; });
     const byAgent = {};
     agentRows.forEach(r => { if(!byAgent[r.name]) byAgent[r.name]={color:r.color,alta:0,media:0,baja:0}; byAgent[r.name][r.quality]=r.n; });
-
+ 
     res.json({
       period: dates,
       summary: { ...summary, thisMonth: (await get(`SELECT COUNT(*) n FROM sessions WHERE strftime('%Y-%m',started_at)=strftime('%Y-%m','now') ${ac}`)).n },
@@ -740,11 +760,11 @@ app.get('/api/analytics', auth, async (req, res) => {
     });
   } catch(e) { console.error('/api/analytics:', e.message); res.status(500).json({ error: e.message }); }
 });
-
+ 
 // ─── Admin ────────────────────────────────────────────────
 app.get('/api/admin/agents',      auth, adminOnly, async (req,res) => res.json(await all('SELECT id,username,name,role,color FROM agents')));
 app.get('/api/admin/wa-accounts', auth, adminOnly, async (req,res) => res.json(await all('SELECT w.*,a.name agent_name,a.color agent_color FROM wa_accounts w JOIN agents a ON a.id=w.agent_id')));
-
+ 
 app.patch('/api/admin/wa-accounts/:id', auth, adminOnly, async (req, res) => {
   try {
     const { phone_number_id, wa_token, verify_token, display_name } = req.body;
@@ -753,7 +773,7 @@ app.patch('/api/admin/wa-accounts/:id', auth, adminOnly, async (req, res) => {
     res.json({ ok:true });
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
-
+ 
 app.patch('/api/admin/agents/:id/password', auth, adminOnly, async (req, res) => {
   try {
     const { password } = req.body;
@@ -762,7 +782,7 @@ app.patch('/api/admin/agents/:id/password', auth, adminOnly, async (req, res) =>
     res.json({ ok:true });
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
-
+ 
 // ─── Reset BD — borra todas las conversaciones, mensajes y contactos ──
 app.post('/api/admin/reset', auth, adminOnly, async (req, res) => {
   try {
@@ -775,7 +795,7 @@ app.post('/api/admin/reset', auth, adminOnly, async (req, res) => {
     res.json({ ok:true });
   } catch(e) { res.status(500).json({ error:e.message }); }
 });
-
+ 
 // ─── Seed demo — solo disponible en entorno TEST ──────────
 app.post('/api/demo/seed', async (req, res) => {
   if (!IS_TEST) return res.status(403).json({ error: 'No disponible en producción' });
@@ -784,13 +804,13 @@ app.post('/api/demo/seed', async (req, res) => {
     const clara = await get('SELECT id FROM agents WHERE username=?',['clara']);
     const waA   = await get('SELECT * FROM wa_accounts WHERE agent_id=?',[angel.id]);
     const waC   = await get('SELECT * FROM wa_accounts WHERE agent_id=?',[clara.id]);
-
+ 
     const contacts = [['34612345678','María García','MG'],['34634567890','Carlos López','CL'],['34698123456','Ana Martínez','AM'],['34677890234','Pedro Sánchez','PS'],['34655432109','Laura Fernández','LF'],['34698765432','Javier Moreno','JM']];
     for (const [p,n,av] of contacts) {
       const ex = await get('SELECT phone FROM contacts WHERE phone=?',[p]);
       if (!ex) await run('INSERT INTO contacts (phone,name,avatar) VALUES (?,?,?)',[p,n,av]);
     }
-
+ 
     const hist = [
       {phone:'34612345678',wa:waA,ag:angel,flow:'cliente',days:14,msgs:[['in','Quiero el X300'],['out','Claro'],['in','Lo compro']],revs:[{q:'alta',note:'Compra cerrada'}]},
       {phone:'34612345678',wa:waA,ag:angel,flow:'cliente',days:7, msgs:[['in','Duda envío'],['out','Te explico'],['in','Gracias']],revs:[{q:'media',note:''},{q:'alta',note:'Resuelta'}]},
@@ -802,7 +822,7 @@ app.post('/api/demo/seed', async (req, res) => {
       {phone:'34698765432',wa:waA,ag:angel,flow:'cliente',days:9, msgs:[['in','500 uds/mes'],['out','Preparamos'],['in','Ok']],revs:[{q:'alta',note:'Oportunidad'}]},
       {phone:'34698765432',wa:waA,ag:angel,flow:'cliente',days:5, msgs:[['out','¿Seguís interesados?']],revs:[]},
     ];
-
+ 
     for (const s of hist) {
       const d = new Date(); d.setDate(d.getDate()-s.days);
       const start = new Date(d); start.setHours(9,0,0,0);
@@ -820,7 +840,7 @@ app.post('/api/demo/seed', async (req, res) => {
         await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,t.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'})]);
       }
     }
-
+ 
     const active = [
       {phone:'34612345678',wa:waA,ag:angel,flow:'cliente',msgs:[['in','¿Stock del X300?']]},
       {phone:'34634567890',wa:waA,ag:angel,flow:'crm',    msgs:[['bot','[CRM] #4521'],['out','Confirmado'],['in','¿Express?']]},
@@ -828,18 +848,18 @@ app.post('/api/demo/seed', async (req, res) => {
       {phone:'34698123456',wa:waC,ag:clara,flow:'mkt',    msgs:[['bot','[Mkt] Primavera'],['in','¿Cuánto?']]},
       {phone:'34655432109',wa:waC,ag:clara,flow:'crm',    msgs:[['in','Ampliar pedido']]},
     ];
-
+ 
     for (const s of active) {
       const ex = await get("SELECT id FROM sessions WHERE phone=? AND wa_account_id=? AND status='active'",[s.phone,s.wa.id]);
       if (ex) continue;
       const r = await run('INSERT INTO sessions (phone,wa_account_id,agent_id,flow,preview) VALUES (?,?,?,?,?)',[s.phone,s.wa.id,s.ag.id,s.flow,s.msgs[s.msgs.length-1][1]]);
       for (let i=0;i<s.msgs.length;i++) await run('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES (?,?,?,?,?)',[r.lastID,s.phone,s.msgs[i][0],s.msgs[i][1],`${9+i}:0${i}`]);
     }
-
+ 
     res.json({ ok:true, logins:{ admin:'admin123', angel:'angel123', clara:'clara123' } });
   } catch(e) { console.error('Seed error:',e); res.status(500).json({ error:e.message }); }
 });
-
+ 
 // ─── Manejador global de errores ─────────────────────────
 app.use((err, req, res, next) => {
   console.error('Error no controlado:', err.message);
@@ -847,7 +867,7 @@ app.use((err, req, res, next) => {
     error: IS_TEST ? err.message : 'Error interno del servidor'
   });
 });
-
+ 
 // ─── Arrancar ─────────────────────────────────────────────
 initDB().then(async () => {
   app.listen(PORT, async () => {
@@ -865,7 +885,7 @@ initDB().then(async () => {
 ║  ⚠️  TEST: seed demo auto, contraseñas por defecto   ║` : ''}
 ║  Demo: POST /api/demo/seed                           ║
 ╚══════════════════════════════════════════════════════╝`);
-
+ 
     // Auto-seed solo en TEST y solo si la BD está vacía
     if (IS_TEST) {
       const count = await get('SELECT COUNT(*) n FROM sessions').catch(() => ({ n: 0 }));
