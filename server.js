@@ -179,6 +179,23 @@ async function initDB() {
     created_at TEXT DEFAULT (datetime('now'))
   )`);
 
+  // Tabla para tokens revocados (logout)
+  await run(`CREATE TABLE IF NOT EXISTS revoked_tokens (
+    jti        TEXT PRIMARY KEY,
+    revoked_at TEXT DEFAULT (datetime('now'))
+  )`);
+
+  // Tabla de log de actividad
+  await run(`CREATE TABLE IF NOT EXISTS activity_log (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    agent_id   INTEGER,
+    username   TEXT,
+    action     TEXT NOT NULL,
+    detail     TEXT DEFAULT '',
+    ip         TEXT DEFAULT '',
+    created_at TEXT DEFAULT (datetime('now'))
+  )`);
+
   // Índices
   for (const idx of [
     'CREATE INDEX IF NOT EXISTS idx_sess_phone  ON sessions(phone)',
@@ -335,12 +352,36 @@ async function getSessionRows(agentId, from, to) {
   `);
 }
 
+// ─── Validaciones de datos entrantes ─────────────────────
+const isValidPhone = p => /^\d{7,15}$/.test(p);
+const isValidEmail = e => !e || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const isValidAgent = a => !a || ['angel','clara','admin'].includes(a.toLowerCase());
+const sanitizeStr = s => s ? String(s).trim().slice(0, 500) : '';
+
+// ─── Log de actividad ────────────────────────────────────
+async function logActivity(agentId, username, action, detail='', ip='') {
+  try {
+    await run('INSERT INTO activity_log (agent_id,username,action,detail,ip) VALUES (?,?,?,?,?)',
+      [agentId||null, username||'system', action, detail.slice(0,500), ip]);
+  } catch {}
+}
+
 // ─── Auth middleware ──────────────────────────────────────
 function auth(req, res, next) {
   const token = req.headers.authorization?.replace('Bearer ', '');
   if (!token) return res.status(401).json({ error: 'Sin token' });
-  try { req.user = jwt.verify(token, JWT_SECRET); next(); }
-  catch { res.status(401).json({ error: 'Token inválido' }); }
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    // Verificar si el token fue revocado (logout)
+    const jti = decoded.jti || token.slice(-32);
+    get('SELECT jti FROM revoked_tokens WHERE jti=?', [jti]).then(revoked => {
+      if (revoked) return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión de nuevo.' });
+      req.user = decoded;
+      req.token = token;
+      req.jti = jti;
+      next();
+    }).catch(() => { req.user = decoded; req.token = token; req.jti = jti; next(); });
+  } catch { res.status(401).json({ error: 'Token inválido' }); }
 }
 function adminOnly(req, res, next) {
   if (req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admins' });
@@ -404,11 +445,13 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
     // Login exitoso — limpiar intentos fallidos
     await run('DELETE FROM login_attempts WHERE username=? AND ip=?', [user, ip]);
 
+    const jti = `${agent.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
     const token = jwt.sign(
-      { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color },
+      { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color, jti },
       JWT_SECRET,
       { expiresIn: '8h' }
     );
+    await logActivity(agent.id, agent.username, 'login', '', ip);
     res.json({ token, agent: { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color } });
   } catch(e) {
     console.error('Login error:', e.message);
@@ -417,6 +460,29 @@ app.post('/api/auth/login', loginLimiter, async (req, res) => {
 });
 
 app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
+
+// ─── Logout — revocar token ───────────────────────────────
+app.post('/api/auth/logout', auth, async (req, res) => {
+  try {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    await run('INSERT OR IGNORE INTO revoked_tokens (jti) VALUES (?)', [req.jti]);
+    await logActivity(req.user.id, req.user.username, 'logout', '', ip);
+    // Limpiar tokens revocados antiguos (más de 8h — ya expirados)
+    await run("DELETE FROM revoked_tokens WHERE revoked_at < datetime('now','-9 hours')").catch(()=>{});
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Log de actividad (solo admin) ───────────────────────
+app.get('/api/admin/activity', auth, adminOnly, async (req, res) => {
+  try {
+    const limit = Math.min(+req.query.limit || 100, 500);
+    const logs = await all(
+      'SELECT * FROM activity_log ORDER BY id DESC LIMIT ?', [limit]
+    );
+    res.json(logs);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
 
 // ─── Info de entorno (público, para el frontend) ──────────
 app.get('/api/env', (req, res) => res.json({ env: IS_TEST ? 'test' : 'production' }));
@@ -552,6 +618,7 @@ app.post('/api/sessions/:id/review', auth, async (req, res) => {
     await run('INSERT INTO reviews (session_id,agent_id,quality,note) VALUES (?,?,?,?)', [id, req.user.id, quality, note]);
     await run('INSERT INTO messages (session_id,phone,direction,body,time_label) SELECT id,phone,?,?,? FROM sessions WHERE id=?',
       ['system', `Revisión · ${quality.toUpperCase()} · ${req.user.name}${note?' · '+note:''}`, nowTime(), id]);
+    await logActivity(req.user.id, req.user.username, 'review', `sesión #${id} · ${quality}`, req.ip||'');
     const s = await get('SELECT * FROM sessions WHERE id=?', [id]);
     const enriched = await buildEnrichedSession(id);
     broadcastTo(s.agent_id, 'review', { sessionId:id, conv:enriched });
@@ -654,6 +721,12 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
     if (!phone||!message) return res.status(400).json({ error: 'Faltan: phone, message' });
 
     const clean = phone.replace(/[\s+]/g,'');
+
+    // Validaciones de seguridad
+    if (!isValidPhone(clean))  return res.status(400).json({ error: 'Formato de teléfono inválido' });
+    if (!isValidEmail(email))  return res.status(400).json({ error: 'Formato de email inválido' });
+    if (!isValidAgent(agentHint)) return res.status(400).json({ error: 'Agente no válido. Usa: angel, clara' });
+    if (String(message).length > 4000) return res.status(400).json({ error: 'Mensaje demasiado largo (máx 4000 chars)' });
     const text  = String(message).trim();
     const parsedTs = parseTimestamp(timestamp);
     const time  = parsedTs ? madridTime(parsedTs).toISOString().slice(11,16) : nowTime();
