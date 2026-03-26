@@ -231,7 +231,12 @@ async function seedAgents() {
 }
 
 // ─── Helpers ─────────────────────────────────────────────
-const nowTime  = () => new Date().toLocaleTimeString('es-ES', { hour:'2-digit', minute:'2-digit', timeZone:'Europe/Madrid' });
+const nowTime = () => {
+  return new Date().toLocaleTimeString('es-ES', {
+    hour: '2-digit', minute: '2-digit',
+    timeZone: 'Europe/Madrid'
+  });
+};
 const mkAvatar = n  => (n||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
 const safeJson = v  => { try { return JSON.parse(v||'[]'); } catch { return []; } };
 
