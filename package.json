@@ -1,7 +1,7 @@
 {
   "name": "wa-manager-pro",
-  "version": "1.0.0",
-  "description": "WhatsApp Manager Pro",
+  "version": "2.0.0",
+  "description": "WhatsApp Manager Pro — PostgreSQL",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -15,7 +15,7 @@
     "express-rate-limit": "^7.3.1",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
-    "sqlite3": "^5.1.7"
+    "pg": "^8.12.0"
   },
   "engines": {
     "node": "20.x"
