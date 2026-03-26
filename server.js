@@ -133,6 +133,7 @@ async function initDB() {
     phone        TEXT PRIMARY KEY,
     name         TEXT NOT NULL DEFAULT 'Desconocido',
     avatar       TEXT DEFAULT '??',
+    email        TEXT DEFAULT '',
     contact_note TEXT DEFAULT '',
     tags         TEXT DEFAULT '[]',
     created_at   TEXT DEFAULT (datetime('now'))
@@ -186,6 +187,8 @@ async function initDB() {
   ]) await run(idx);
 
   console.log('✅ Base de datos lista');
+  // Migración: añadir columna email si no existe
+  await run("ALTER TABLE contacts ADD COLUMN email TEXT DEFAULT ''").catch(() => {});
   await seedAgents();
 }
 
@@ -265,6 +268,7 @@ async function enrichSession(row) {
     phone:           row.phone,
     name:            row.name || row.phone,
     avatar:          row.avatar || mkAvatar(row.name),
+    email:           row.email || '',
     flow:            row.flow || 'cliente',
     status:          row.status,
     unread:          row.unread === 1,
@@ -280,7 +284,7 @@ async function enrichSession(row) {
     reviews:         reviews.map(r => ({ id:r.id, quality:r.quality, note:r.note, agentName:r.agent_name, agentColor:r.agent_color, createdAt:r.created_at })),
     lastQuality:     lastRev?.quality || null,
     reviewCount:     reviews.length,
-    messages:        msgs.map(m => ({ dir:m.direction, text:m.body, time:m.time_label||'', id:m.meta_id })),
+    messages:        msgs.map(m => ({ dir:m.direction, text:m.body, time:m.time_label||'', id:m.meta_id, created_at:m.created_at })),
     sessionHistory:  await Promise.all(history.map(async s => {
       const revs = await all('SELECT * FROM reviews WHERE session_id=?', [s.id]);
       const cnt  = await get('SELECT COUNT(*) n FROM messages WHERE session_id=?', [s.id]);
@@ -296,7 +300,7 @@ async function getSessionRows(agentId, from, to) {
   const toClause   = to   ? `AND date(s.last_message_at) <= '${to}'`   : '';
   const agentClause= agentId ? `AND s.agent_id=${agentId}` : '';
   return all(`
-    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,
+    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,
            a.name agent_name,a.color agent_color,w.display_name wa_name
     FROM sessions s
     JOIN contacts c ON c.phone=s.phone
@@ -450,14 +454,17 @@ app.post('/webhook', async (req, res) => {
 async function upsertContact(phone, name, email) {
   const existing = await get('SELECT * FROM contacts WHERE phone=?', [phone]);
   if (!existing) {
-    await run('INSERT INTO contacts (phone,name,avatar) VALUES (?,?,?)', [phone, name||phone, mkAvatar(name||phone)]);
-  } else if (name && name !== phone) {
-    await run('UPDATE contacts SET name=? WHERE phone=? AND name=phone', [name, phone]);
-  }
-  if (email && existing) {
-    const note = existing.contact_note || '';
-    if (!note.includes(email)) {
-      await run('UPDATE contacts SET contact_note=? WHERE phone=?', [[note, `Email: ${email}`].filter(Boolean).join(' · '), phone]);
+    await run('INSERT INTO contacts (phone,name,avatar,email) VALUES (?,?,?,?)',
+      [phone, name||phone, mkAvatar(name||phone), email||'']);
+  } else {
+    // Actualizar nombre si viene uno nuevo y es diferente al teléfono
+    if (name && name !== phone && name !== existing.name) {
+      await run('UPDATE contacts SET name=?,avatar=? WHERE phone=?',
+        [name, mkAvatar(name), phone]);
+    }
+    // Actualizar email si viene uno nuevo
+    if (email && !existing.email) {
+      await run('UPDATE contacts SET email=? WHERE phone=?', [email, phone]);
     }
   }
 }
@@ -595,6 +602,20 @@ app.post('/api/send', auth, async (req, res) => {
   } catch(e) { res.status(500).json({ error: e.message }); }
 });
 
+// ─── Helper para parsear timestamps en varios formatos ────
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  // Formato DD/MM/YYYY HH:MM:SS o DD/MM/YYYY HH:MM o DD/MM/YYYY
+  const ddmmyyyy = ts.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, hh='00', min='00', ss='00'] = ddmmyyyy;
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+01:00`);
+  }
+  // Formato ISO u otros — dejar que Date lo parsee
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // ─── Integración sistema externo (AWS) ───────────────────
 function externalAuth(req, res, next) {
   const key = req.headers['x-api-key'];
@@ -610,7 +631,8 @@ app.post('/messages/incoming', externalAuth, async (req, res) => {
 
     const clean = phone.replace(/[\s+]/g,'');
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
     const dir   = direction==='incoming' ? 'in' : 'bot';
 
     await upsertContact(clean, name, email);
@@ -651,7 +673,8 @@ app.post('/messages/outgoing', externalAuth, async (req, res) => {
     if (!message) return res.status(400).json({ error: 'Falta message' });
     const clean = phone ? phone.replace(/[\s+]/g,'') : null;
     const text  = String(message).trim();
-    const time  = timestamp ? new Date(timestamp).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? parsedTs.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'}) : nowTime();
 
     if (clean) {
       const session = await get("SELECT * FROM sessions WHERE phone=? AND status='active' ORDER BY id DESC LIMIT 1", [clean]);
