@@ -622,7 +622,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
       <div class="period-sel">
         <button class="ps-btn on" onclick="setPeriod('week',this)">Esta semana +3d</button>
         <button class="ps-btn"    onclick="setPeriod('month',this)">Este mes +3d</button>
-        <button class="ps-btn"    onclick="setPeriod('3months',this)">3 meses</button>
+        <button class="ps-btn"    onclick="setPeriod('quarter',this)">3 meses</button>
         <button class="ps-btn"    onclick="setPeriod('custom',this)">Personalizado</button>
       </div>
       <div class="ps-custom" id="ps-custom">
@@ -632,6 +632,8 @@ textarea.ip-note::placeholder{color:var(--t3)}
         <button class="ps-apply" onclick="applyCustomPeriod()">Aplicar</button>
       </div>
     </div>
+
+    <!-- KPIs -->
     <div class="kg">
       <div class="kpi"><div class="kpi-l">Sesiones activas</div><div class="kpi-v g" id="k-act">—</div><div class="kpi-s">sin cerrar</div></div>
       <div class="kpi"><div class="kpi-l">Contactos únicos</div><div class="kpi-v"   id="k-con">—</div><div class="kpi-s">históricas</div></div>
@@ -641,29 +643,26 @@ textarea.ip-note::placeholder{color:var(--t3)}
       <div class="kpi"><div class="kpi-l">Media</div><div class="kpi-v a"            id="k-med">—</div><div class="kpi-s">revisiones</div></div>
       <div class="kpi"><div class="kpi-l">Baja</div><div class="kpi-v r"             id="k-baj">—</div><div class="kpi-s">revisiones</div></div>
     </div>
+
+    <!-- Gráficos principales -->
     <div class="cg">
-      <div class="cc wide"><div class="cct">Revisiones por día <span>por calidad · 30 días</span></div><div class="cw tall"><canvas id="ch-d"></canvas></div></div>
-      <div class="cc"><div class="cct">Distribución calidad</div><div class="cw"><canvas id="ch-q"></canvas></div></div>
-      <div class="cc"><div class="cct">Por agente <span id="ag-chart-lbl"></span></div>
+      <div class="cc wide"><div class="cct">Revisiones por día <span>por calidad</span></div><div class="cw tall"><canvas id="ch-d"></canvas></div></div>
+      <!-- Distribución global -->
+      <div class="cc"><div class="cct">Distribución global <span>por calidad</span></div><div class="cw"><canvas id="ch-q"></canvas></div></div>
+      <!-- Distribución por agente -->
+      <div class="cc"><div class="cct">Distribución por agente <span id="ag-chart-lbl"></span></div>
         <table class="at" id="ag-t"><thead><tr><th>Agente</th><th style="color:var(--G)">Alta</th><th style="color:var(--A)">Media</th><th style="color:var(--R)">Baja</th><th>Total</th></tr></thead><tbody></tbody></table>
       </div>
-      <div class="cc"><div class="cct">Top contactos</div>
-        <table class="at" id="top-t"><thead><tr><th>Contacto</th><th>Sesiones</th><th style="color:var(--G)">Alta</th><th style="color:var(--A)">Med</th><th style="color:var(--R)">Baja</th></tr></thead><tbody></tbody></table>
-      </div>
-    </div>
-    <div class="cc"><div class="cct">Historial de revisiones <span id="af-lbl"></span></div>
-      <div class="tw"><table class="tt" id="hist-t">
-        <thead><tr><th>Contacto</th><th>Agente</th><th>Calidad</th><th>Nota</th><th>Sesión</th><th>Fecha</th></tr></thead>
-        <tbody id="hist-tb"></tbody>
-      </table></div>
+      <!-- Gráfico barras por agente -->
+      <div class="cc" id="ag-chart-box" style="display:none"><div class="cct">Calidad por agente <span>barras</span></div><div class="cw"><canvas id="ch-ag"></canvas></div></div>
     </div>
 
-    <!-- Tasa de respuesta semanal/mensual -->
+    <!-- Tasa de respuesta semana ANTERIOR y mes ANTERIOR -->
     <div class="cc wide">
-      <div class="cct">Respondidos vs Sin respuesta <span>semana actual y mes actual</span></div>
+      <div class="cct">Respondidos vs Sin respuesta <span>semana anterior y mes anterior</span></div>
       <div class="rr-grid" id="rr-grid">
         <div class="rr-card">
-          <div class="rr-title">Esta semana (7+3 días)</div>
+          <div class="rr-title" id="rr-w-title">Semana anterior</div>
           <div class="rr-donut">
             <canvas id="rr-week-chart" width="80" height="80"></canvas>
             <div>
@@ -677,7 +676,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
           </div>
         </div>
         <div class="rr-card">
-          <div class="rr-title">Este mes (30+3 días)</div>
+          <div class="rr-title" id="rr-m-title">Mes anterior</div>
           <div class="rr-donut">
             <canvas id="rr-month-chart" width="80" height="80"></canvas>
             <div>
@@ -699,7 +698,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
       <div class="cc"><div class="cct">Evolución mensual <span>últimos 6 meses</span></div><div class="cw"><canvas id="ch-monthly"></canvas></div></div>
     </div>
 
-    <!-- Sin respuesta: último msg nuestro +3 días sin contestar -->
+    <!-- Sin respuesta -->
     <div class="cc wide">
       <div class="cct" style="display:flex;align-items:center;justify-content:space-between">
         <span>Sin respuesta <span style="font-size:10px;font-weight:400;color:var(--t3)">último mensaje nuestro, cliente sin contestar +3 días</span></span>
@@ -1513,31 +1512,41 @@ function renderAnalytics(d) {
   const G='#00e5a0',A='#f5a623',R='#ff5757',GR='rgba(255,255,255,.05)';
   Chart.defaults.color='#3e4260'; Chart.defaults.font.family="'Sora',sans-serif";
 
+  // Gráfico línea por día
   const days=d.qualityPerDay||[];
   const labels=days.map(r=>r.day?.slice(5));
-  const mkDs=(q,col)=>({label:q.charAt(0).toUpperCase()+q.slice(1),data:(afF==='all'||afF===q)?days.map(r=>r[q]||0):days.map(()=>0),borderColor:col,backgroundColor:col.replace('rgb','rgba').replace(')',',0.08)'),fill:true,tension:.4,pointRadius:2,borderWidth:2});
+  const mkDs=(q,col)=>({label:q.charAt(0).toUpperCase()+q.slice(1),data:(afF==='all'||afF===q)?days.map(r=>r[q]||0):days.map(()=>0),borderColor:col,backgroundColor:col+'14',fill:true,tension:.4,pointRadius:2,borderWidth:2});
   const dsets=[mkDs('alta',G),mkDs('media',A),mkDs('baja',R)].filter(ds=>afF==='all'||afF===ds.label.toLowerCase());
   mkChart('ch-d',{type:'line',data:{labels,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{color:GR},ticks:{maxTicksLimit:10,font:{size:10}}},y:{grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}});
 
+  // Donut distribución global
   const qd=afF==='all'?[d.byQuality?.alta||0,d.byQuality?.media||0,d.byQuality?.baja||0]:afF==='alta'?[d.byQuality?.alta||0,0,0]:afF==='media'?[0,d.byQuality?.media||0,0]:[0,0,d.byQuality?.baja||0];
   mkChart('ch-q',{type:'doughnut',data:{labels:['Alta','Media','Baja'],datasets:[{data:qd,backgroundColor:[G,A,R],borderWidth:0,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:12,font:{size:10}}}}}});
 
   // Tabla por agente
   const byAg=d.byAgent||{};
   const agNames=Object.keys(byAg);
-  document.getElementById('ag-chart-lbl').textContent=me.role==='admin'?'todos los agentes':'';
-  const maxAg=Math.max(...agNames.map(n=>(byAg[n].alta||0)+(byAg[n].media||0)+(byAg[n].baja||0)),1);
-  document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);return`<tr><td>${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td><span class="mbar" style="background:var(--G);width:${Math.round(((v.alta||0)/maxAg)*50)}px"></span><span class="mbar" style="background:var(--A);width:${Math.round(((v.media||0)/maxAg)*50)}px;margin-left:2px"></span><span class="mbar" style="background:var(--R);width:${Math.round(((v.baja||0)/maxAg)*50)}px;margin-left:2px"></span></td></tr>`}).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
+  document.getElementById('ag-chart-lbl').textContent=me.role==='admin'?'· todos los agentes':'';
+  document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{
+    const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);
+    return`<tr><td style="font-weight:600;color:${v.color||'var(--t)'}">${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td class="mn">${tot}</td></tr>`;
+  }).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
 
-  // Top contactos
-  const tops=(d.topContacts||[]);
-  document.querySelector('#top-t tbody').innerHTML=tops.length?tops.map(c=>`<tr><td class="nm">${esc(c.name||c.phone)}</td><td class="mn">${c.sessions||0}</td><td class="mn" style="color:var(--G)">${c.altas||0}</td><td class="mn" style="color:var(--A)">${c.medias||0}</td><td class="mn" style="color:var(--R)">${c.bajas||0}</td></tr>`).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
-
-  // Historial revisiones
-  document.getElementById('af-lbl').textContent=afF==='all'?'':` · ${afF.toUpperCase()}`;
-  const hist=(d.reviewHistory||[]).filter(r=>afF==='all'||r.quality===afF);
-  const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
-  document.getElementById('hist-tb').innerHTML=hist.length?hist.map(r=>`<tr><td class="nm">${esc(r.name||r.phone)}</td><td class="mn" style="color:${r.agentColor||'var(--t2)'}">${esc(r.agentName||'')}</td><td><span class="qbadge qb-${r.quality}">${r.quality?.toUpperCase()||'—'}</span></td><td style="color:var(--t3);font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(r.note||'—')}</td><td class="mn">#${r.sessionId||'?'}</td><td class="mn">${fmtDate(r.createdAt)}</td></tr>`).join(''):'<tr><td colspan="6" style="color:var(--t3);padding:16px 10px">Sin revisiones para este filtro</td></tr>';
+  // Gráfico barras por agente (solo si hay más de 1)
+  if (agNames.length > 1) {
+    document.getElementById('ag-chart-box').style.display='block';
+    mkChart('ch-ag',{type:'bar',data:{
+      labels:agNames,
+      datasets:[
+        {label:'Alta',  data:agNames.map(n=>byAg[n].alta||0),  backgroundColor:G,borderRadius:3},
+        {label:'Media', data:agNames.map(n=>byAg[n].media||0), backgroundColor:A,borderRadius:3},
+        {label:'Baja',  data:agNames.map(n=>byAg[n].baja||0),  backgroundColor:R,borderRadius:3},
+      ]},
+      options:{responsive:true,maintainAspectRatio:false,
+        scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},y:{stacked:true,grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},
+        plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
+    });
+  }
 
   renderNoReplyAndRates(d);
 }
@@ -1564,20 +1573,23 @@ function renderNoReplyAndRates(d) {
 
   const G='#00e5a0', R='#ff5757';
   const rr = d.responseRate || {};
-  function renderRRCard(canvasId, repId, nrpId, pctId, replied, notReplied) {
+  function renderRRCard(canvasId, repId, nrpId, pctId, titleId, replied, notReplied, from, to) {
     const total = replied + notReplied;
     const pct   = total ? Math.round((replied/total)*100) : 0;
     document.getElementById(repId).textContent = replied + ' respondidos';
     document.getElementById(nrpId).textContent = notReplied + ' sin respuesta';
     document.getElementById(pctId).textContent = pct + '%';
+    if (titleId && from && to) {
+      document.getElementById(titleId).textContent = fmtDate(from) + ' → ' + fmtDate(to);
+    }
     mkChart(canvasId, {
       type:'doughnut',
       data:{ datasets:[{ data:[replied, notReplied||0.001], backgroundColor:[G, notReplied?R:'rgba(255,255,255,.08)'], borderWidth:0, hoverOffset:3 }] },
       options:{ responsive:false, cutout:'72%', plugins:{ legend:{ display:false } } }
     });
   }
-  if (rr.week)  renderRRCard('rr-week-chart',  'rr-w-rep','rr-w-nrp','rr-w-pct',  rr.week.replied,  rr.week.notReplied);
-  if (rr.month) renderRRCard('rr-month-chart', 'rr-m-rep','rr-m-nrp','rr-m-pct', rr.month.replied, rr.month.notReplied);
+  if (rr.week)  renderRRCard('rr-week-chart',  'rr-w-rep','rr-w-nrp','rr-w-pct', 'rr-w-title', rr.week.replied,  rr.week.notReplied,  rr.week.from,  rr.week.to);
+  if (rr.month) renderRRCard('rr-month-chart', 'rr-m-rep','rr-m-nrp','rr-m-pct', 'rr-m-title', rr.month.replied, rr.month.notReplied, rr.month.from, rr.month.to);
 
   const GR = 'rgba(255,255,255,.05)';
   const weekly = d.weeklyRate || [];
