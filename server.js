@@ -943,7 +943,17 @@ app.get('/api/analytics', auth, async (req, res) => {
       all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, params),
     ]);
 
-    const wDates = periodDates('week'), mDates = periodDates('month');
+    // Semana anterior (lunes-domingo de la semana pasada)
+    const now = new Date();
+    const dayOfWeek = now.getUTCDay() || 7; // 1=lunes, 7=domingo
+    const prevMonday = new Date(now); prevMonday.setUTCDate(now.getUTCDate() - dayOfWeek - 6);
+    const prevSunday = new Date(now); prevSunday.setUTCDate(now.getUTCDate() - dayOfWeek);
+    const wDates = { from: prevMonday.toISOString().slice(0,10), to: prevSunday.toISOString().slice(0,10) };
+
+    // Mes anterior
+    const prevMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
+    const prevMonthEnd = new Date(now.getUTCFullYear(), now.getUTCMonth(), 0);
+    const mDates = { from: prevMonth.toISOString().slice(0,10), to: prevMonthEnd.toISOString().slice(0,10) };
     const wParams = aid ? [aid] : [];
     const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
       get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${aid?`s.agent_id=$1 AND`:'1=1 AND'} s.started_at::date >= '${wDates.from}' AND s.started_at::date <= '${wDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`, wParams),
