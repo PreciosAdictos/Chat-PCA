@@ -927,20 +927,31 @@ app.get('/api/analytics', auth, async (req, res) => {
       const pd = periodDates(req.query.period); if (pd) dates = pd;
     }
 
-    const params = [];
-    let ac = '', fc = '', tc = '', rc = '', rt = '';
-    if (aid)        { params.push(aid);        ac = `AND s.agent_id=$${params.length}`; }
-    if (dates.from) { params.push(dates.from); fc = `AND s.started_at::date >= $${params.length}::date`; rc = `AND r.created_at::date >= $${params.length}::date`; }
-    if (dates.to)   { params.push(dates.to);   tc = `AND s.started_at::date <= $${params.length}::date`; rt = `AND r.created_at::date <= $${params.length}::date`; }
+    // Construir cláusulas y parámetros independientes por tipo de query
+    // Para sessions (s)
+    const sParams = []; let ac='', fc='', tc='';
+    if (aid)        { sParams.push(aid);        ac = `AND s.agent_id=$${sParams.length}`; }
+    if (dates.from) { sParams.push(dates.from); fc = `AND s.started_at::date >= $${sParams.length}::date`; }
+    if (dates.to)   { sParams.push(dates.to);   tc = `AND s.started_at::date <= $${sParams.length}::date`; }
+
+    // Para reviews (r) — fechas basadas en created_at de reviews
+    const rParams = []; let rac='', rc='', rt='';
+    if (aid)        { rParams.push(aid);        rac = `AND s.agent_id=$${rParams.length}`; }
+    if (dates.from) { rParams.push(dates.from); rc  = `AND r.created_at::date >= $${rParams.length}::date`; }
+    if (dates.to)   { rParams.push(dates.to);   rt  = `AND r.created_at::date <= $${rParams.length}::date`; }
+
+    // Para agentRows (sin fechas de sesión, solo filtro agente)
+    const aParams = []; let aac='';
+    if (aid) { aParams.push(aid); aac = `AND s.agent_id=$${aParams.length}`; }
 
     const [summary, byQrows, agentRows, sessDay, revDay, topC, noReply] = await Promise.all([
-      get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`, params),
-      all(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY r.quality`, params),
-      all(`SELECT a.name, a.color, r.quality, COUNT(*) n FROM reviews r JOIN agents a ON a.id=r.agent_id JOIN sessions s ON s.id=r.session_id WHERE a.role='agent' ${rc} ${rt} GROUP BY a.name,a.color,r.quality`, params),
-      all(`SELECT s.started_at::date AS day, COUNT(*) n FROM sessions s WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY s.started_at::date ORDER BY s.started_at::date`, params),
-      all(`SELECT r.created_at::date AS day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${ac} ${rc} ${rt} GROUP BY r.created_at::date,r.quality ORDER BY r.created_at::date`, params),
-      all(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions,COUNT(CASE WHEN r.quality='alta' THEN 1 END) altas,COUNT(CASE WHEN r.quality='media' THEN 1 END) medias,COUNT(CASE WHEN r.quality='baja' THEN 1 END) bajas FROM contacts c JOIN sessions s ON s.phone=c.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY c.phone,c.name ORDER BY sessions DESC LIMIT 10`, params),
-      all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, params),
+      get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`, sParams),
+      all(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${rac} ${rc} ${rt} GROUP BY r.quality`, rParams),
+      all(`SELECT a.name, a.color, r.quality, COUNT(*) n FROM reviews r JOIN agents a ON a.id=r.agent_id JOIN sessions s ON s.id=r.session_id WHERE a.role='agent' ${rac} ${rc} ${rt} GROUP BY a.name,a.color,r.quality`, rParams),
+      all(`SELECT s.started_at::date AS day, COUNT(*) n FROM sessions s WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY s.started_at::date ORDER BY s.started_at::date`, sParams),
+      all(`SELECT r.created_at::date AS day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${rac} ${rc} ${rt} GROUP BY r.created_at::date,r.quality ORDER BY r.created_at::date`, rParams),
+      all(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions,COUNT(CASE WHEN r.quality='alta' THEN 1 END) altas,COUNT(CASE WHEN r.quality='media' THEN 1 END) medias,COUNT(CASE WHEN r.quality='baja' THEN 1 END) bajas FROM contacts c JOIN sessions s ON s.phone=c.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY c.phone,c.name ORDER BY sessions DESC LIMIT 10`, sParams),
+      all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, sParams),
     ]);
 
     // Semana anterior (lunes-domingo de la semana pasada)
@@ -963,8 +974,8 @@ app.get('/api/analytics', auth, async (req, res) => {
     ]);
 
     const [weeklyRate, monthlyRate] = await Promise.all([
-      all(`SELECT TO_CHAR(s.started_at, 'IYYY-IW') week,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '90 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY week ORDER BY week ASC`, params),
-      all(`SELECT TO_CHAR(s.started_at, 'YYYY-MM') month,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '365 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY month ORDER BY month ASC`, params),
+      all(`SELECT TO_CHAR(s.started_at, 'IYYY-IW') week,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '90 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY week ORDER BY week ASC`, sParams),
+      all(`SELECT TO_CHAR(s.started_at, 'YYYY-MM') month,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '365 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY month ORDER BY month ASC`, sParams),
     ]);
 
     const dayMap = {};
@@ -975,7 +986,7 @@ app.get('/api/analytics', auth, async (req, res) => {
 
     res.json({
       period: dates,
-      summary: { ...summary, thisMonth: (await get(`SELECT COUNT(*) n FROM sessions WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM') ${ac}`, params)).n },
+      summary: { ...summary, thisMonth: (await get(`SELECT COUNT(*) n FROM sessions WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM') ${ac}`, sParams)).n },
       byQuality: Object.fromEntries(byQrows.map(r=>[r.quality,+r.n])),
       byAgent,
       qualityPerDay: Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b)).map(([day,v])=>({day,...v})),
