@@ -1,4 +1,4 @@
-// v2 - fix hora Madrid
+// v3 - fix analytics - fix hora Madrid
 /**
  * WA Manager Pro — server.js
  * ═══════════════════════════════════════════════════════
