@@ -927,75 +927,90 @@ app.get('/api/analytics', auth, async (req, res) => {
       const pd = periodDates(req.query.period); if (pd) dates = pd;
     }
 
-    // Parámetros independientes por tipo de query
-    const sParams = []; let ac='', fc='', tc='';
-    if (aid)        { sParams.push(aid);        ac = `AND s.agent_id=$${sParams.length}`; }
-    if (dates.from) { sParams.push(dates.from); fc = `AND s.started_at::date >= $${sParams.length}::date`; }
-    if (dates.to)   { sParams.push(dates.to);   tc = `AND s.started_at::date <= $${sParams.length}::date`; }
+    // Construir cláusulas SQL con parámetros posicionales independientes
+    function buildSessionClauses(startIdx = 1) {
+      const p = []; const c = { ac:'', fc:'', tc:'' };
+      if (aid)        { p.push(aid);        c.ac = `AND s.agent_id=$${startIdx + p.length - 1}`; }
+      if (dates.from) { p.push(dates.from); c.fc = `AND s.started_at::date >= $${startIdx + p.length - 1}::date`; }
+      if (dates.to)   { p.push(dates.to);   c.tc = `AND s.started_at::date <= $${startIdx + p.length - 1}::date`; }
+      return { params: p, ...c };
+    }
+    function buildReviewClauses(startIdx = 1) {
+      const p = []; const c = { rac:'', rc:'', rt:'' };
+      if (aid)        { p.push(aid);        c.rac = `AND s.agent_id=$${startIdx + p.length - 1}`; }
+      if (dates.from) { p.push(dates.from); c.rc  = `AND r.created_at::date >= $${startIdx + p.length - 1}::date`; }
+      if (dates.to)   { p.push(dates.to);   c.rt  = `AND r.created_at::date <= $${startIdx + p.length - 1}::date`; }
+      return { params: p, ...c };
+    }
 
-    const rParams = []; let rac='', rc='', rt='';
-    if (aid)        { rParams.push(aid);        rac = `AND s.agent_id=$${rParams.length}`; }
-    if (dates.from) { rParams.push(dates.from); rc  = `AND r.created_at::date >= $${rParams.length}::date`; }
-    if (dates.to)   { rParams.push(dates.to);   rt  = `AND r.created_at::date <= $${rParams.length}::date`; }
+    const s = buildSessionClauses(1);
+    const r = buildReviewClauses(1);
+
+    const q = (sql, params) => pool.query(sql, params).then(res => res.rows.map(normalizeRow));
+    const q1 = (sql, params) => pool.query(sql, params).then(res => normalizeRow(res.rows[0] || {}));
 
     const [summary, byQrows, agentRows, sessDay, revDay, topC, noReply] = await Promise.all([
-      get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`, sParams),
-      all(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${rac} ${rc} ${rt} GROUP BY r.quality`, rParams),
-      all(`SELECT a.name, a.color, r.quality, COUNT(*) n FROM reviews r JOIN agents a ON a.id=r.agent_id JOIN sessions s ON s.id=r.session_id WHERE a.role='agent' ${rac} ${rc} ${rt} GROUP BY a.name,a.color,r.quality`, rParams),
-      all(`SELECT s.started_at::date AS day, COUNT(*) n FROM sessions s WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY s.started_at::date ORDER BY s.started_at::date`, sParams),
-      all(`SELECT r.created_at::date AS day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${rac} ${rc} ${rt} GROUP BY r.created_at::date,r.quality ORDER BY r.created_at::date`, rParams),
-      all(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions,COUNT(CASE WHEN r.quality='alta' THEN 1 END) altas,COUNT(CASE WHEN r.quality='media' THEN 1 END) medias,COUNT(CASE WHEN r.quality='baja' THEN 1 END) bajas FROM contacts c JOIN sessions s ON s.phone=c.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc} GROUP BY c.phone,c.name ORDER BY sessions DESC LIMIT 10`, sParams),
-      all(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, sParams),
+      q1(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${s.ac} ${s.fc} ${s.tc}`, s.params),
+      q(`SELECT r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${r.rac} ${r.rc} ${r.rt} GROUP BY r.quality`, r.params),
+      q(`SELECT a.name, a.color, r.quality, COUNT(*) n FROM reviews r JOIN agents a ON a.id=r.agent_id JOIN sessions s ON s.id=r.session_id WHERE a.role='agent' ${r.rac} ${r.rc} ${r.rt} GROUP BY a.name,a.color,r.quality`, r.params),
+      q(`SELECT s.started_at::date AS day, COUNT(*) n FROM sessions s WHERE 1=1 ${s.ac} ${s.fc} ${s.tc} GROUP BY s.started_at::date ORDER BY s.started_at::date`, s.params),
+      q(`SELECT r.created_at::date AS day, r.quality, COUNT(*) n FROM reviews r JOIN sessions s ON s.id=r.session_id WHERE 1=1 ${r.rac} ${r.rc} ${r.rt} GROUP BY r.created_at::date,r.quality ORDER BY r.created_at::date`, r.params),
+      q(`SELECT c.phone,c.name,COUNT(DISTINCT s.id) sessions FROM contacts c JOIN sessions s ON s.phone=c.phone WHERE 1=1 ${s.ac} ${s.fc} ${s.tc} GROUP BY c.phone,c.name ORDER BY sessions DESC LIMIT 10`, s.params),
+      q(`SELECT s.id session_id,s.phone,c.name,c.avatar,a.name agent_name,a.color agent_color,w.display_name wa_name,lm.body last_body,lm.created_at last_msg_at,FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id JOIN messages lm ON lm.id=(SELECT id FROM messages WHERE session_id=s.id AND direction IN ('out','bot') ORDER BY id DESC LIMIT 1) WHERE s.status='active' ${s.ac} AND NOT EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction='in' AND created_at>lm.created_at) AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400>3 ORDER BY days_waiting DESC`, s.params),
     ]);
 
-    // Semana anterior (lunes-domingo de la semana pasada)
+    // Tasa de respuesta: semana anterior y mes anterior
     const now = new Date();
-    const dayOfWeek = now.getUTCDay() || 7; // 1=lunes, 7=domingo
+    const dayOfWeek = now.getUTCDay() || 7;
     const prevMonday = new Date(now); prevMonday.setUTCDate(now.getUTCDate() - dayOfWeek - 6);
     const prevSunday = new Date(now); prevSunday.setUTCDate(now.getUTCDate() - dayOfWeek);
     const wDates = { from: prevMonday.toISOString().slice(0,10), to: prevSunday.toISOString().slice(0,10) };
-
-    // Mes anterior
     const prevMonth = new Date(now.getUTCFullYear(), now.getUTCMonth() - 1, 1);
     const prevMonthEnd = new Date(now.getUTCFullYear(), now.getUTCMonth(), 0);
     const mDates = { from: prevMonth.toISOString().slice(0,10), to: prevMonthEnd.toISOString().slice(0,10) };
+
     const wParams = aid ? [aid] : [];
+    const wAc = aid ? 's.agent_id=$1 AND' : '1=1 AND';
+
     const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
-      get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${aid?`s.agent_id=$1 AND`:'1=1 AND'} s.started_at::date >= '${wDates.from}' AND s.started_at::date <= '${wDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`, wParams),
-      get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${aid?`s.agent_id=$1 AND`:'1=1 AND'} s.started_at::date >= '${wDates.from}' AND s.started_at::date <= '${wDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-s.last_message_at))/86400>3`, wParams),
-      get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${aid?`s.agent_id=$1 AND`:'1=1 AND'} s.started_at::date >= '${mDates.from}' AND s.started_at::date <= '${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`, wParams),
-      get(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${aid?`s.agent_id=$1 AND`:'1=1 AND'} s.started_at::date >= '${mDates.from}' AND s.started_at::date <= '${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-s.last_message_at))/86400>3`, wParams),
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${wAc} s.started_at::date >= '${wDates.from}' AND s.started_at::date <= '${wDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`, wParams),
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${wAc} s.started_at::date >= '${wDates.from}' AND s.started_at::date <= '${wDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-s.last_message_at))/86400>3`, wParams),
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${wAc} s.started_at::date >= '${mDates.from}' AND s.started_at::date <= '${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`, wParams),
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s WHERE ${wAc} s.started_at::date >= '${mDates.from}' AND s.started_at::date <= '${mDates.to}' AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-s.last_message_at))/86400>3`, wParams),
     ]);
 
     const [weeklyRate, monthlyRate] = await Promise.all([
-      all(`SELECT TO_CHAR(s.started_at, 'IYYY-IW') week,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '90 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY week ORDER BY week ASC`, sParams),
-      all(`SELECT TO_CHAR(s.started_at, 'YYYY-MM') month,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '365 days' ${ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY month ORDER BY month ASC`, sParams),
+      q(`SELECT TO_CHAR(s.started_at, 'IYYY-IW') week,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '90 days' ${s.ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY week ORDER BY week ASC`, s.params),
+      q(`SELECT TO_CHAR(s.started_at, 'YYYY-MM') month,COUNT(DISTINCT s.id) total,COUNT(DISTINCT CASE WHEN EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at>(SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) THEN s.id END) replied FROM sessions s WHERE s.started_at>=NOW()-INTERVAL '365 days' ${s.ac} AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot')) GROUP BY month ORDER BY month ASC`, s.params),
     ]);
 
     const dayMap = {};
-    revDay.forEach(r => { const d=r.day?.slice?.(0,10)||r.day; if(!dayMap[d]) dayMap[d]={alta:0,media:0,baja:0}; dayMap[d][r.quality]=+r.n; });
-    sessDay.forEach(r => { const d=r.day?.slice?.(0,10)||r.day; if(!dayMap[d]) dayMap[d]={alta:0,media:0,baja:0}; dayMap[d].total=+r.n; });
+    revDay.forEach(row => { const d=String(row.day).slice(0,10); if(!dayMap[d]) dayMap[d]={alta:0,media:0,baja:0}; dayMap[d][row.quality]=+row.n; });
+    sessDay.forEach(row => { const d=String(row.day).slice(0,10); if(!dayMap[d]) dayMap[d]={alta:0,media:0,baja:0}; dayMap[d].total=+row.n; });
     const byAgent = {};
-    agentRows.forEach(r => { if(!byAgent[r.name]) byAgent[r.name]={color:r.color,alta:0,media:0,baja:0}; byAgent[r.name][r.quality]=+r.n; });
+    agentRows.forEach(row => { if(!byAgent[row.name]) byAgent[row.name]={color:row.color,alta:0,media:0,baja:0}; byAgent[row.name][row.quality]=+row.n; });
+
+    const thisMonth = await q1(`SELECT COUNT(*) n FROM sessions WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM') ${s.ac}`, s.params);
 
     res.json({
       period: dates,
-      summary: { ...summary, thisMonth: (await get(`SELECT COUNT(*) n FROM sessions WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM') ${ac}`, sParams)).n },
-      byQuality: Object.fromEntries(byQrows.map(r=>[r.quality,+r.n])),
+      summary: { ...summary, thisMonth: +thisMonth.n },
+      byQuality: Object.fromEntries(byQrows.map(row=>[row.quality,+row.n])),
       byAgent,
       qualityPerDay: Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b)).map(([day,v])=>({day,...v})),
       topContacts: topC,
-      agents: req.user.role==='admin' ? await all('SELECT id,username,name,role,color FROM agents') : [],
-      noReply: noReply.map(r=>({ sessionId:r.session_id, phone:r.phone, name:r.name, avatar:r.avatar, agentName:r.agent_name, agentColor:r.agent_color, waName:r.wa_name, lastBody:r.last_body, lastMsgAt:r.last_msg_at, daysWaiting:r.days_waiting })),
+      agents: req.user.role==='admin' ? (await pool.query('SELECT id,username,name,role,color FROM agents')).rows : [],
+      noReply: noReply.map(row=>({ sessionId:row.session_id, phone:row.phone, name:row.name, avatar:row.avatar, agentName:row.agent_name, agentColor:row.agent_color, waName:row.wa_name, lastBody:row.last_body, lastMsgAt:row.last_msg_at, daysWaiting:row.days_waiting })),
       responseRate: {
-        week:  { label:'Últimos 7 días (+3 espera)', from:wDates.from, to:wDates.to, replied:+repliedW.n, notReplied:+notRepliedW.n, total:+repliedW.n+(+notRepliedW.n) },
-        month: { label:'Último mes (+3 espera)',     from:mDates.from, to:mDates.to, replied:+repliedM.n, notReplied:+notRepliedM.n, total:+repliedM.n+(+notRepliedM.n) },
+        week:  { from:wDates.from, to:wDates.to, replied:+repliedW.n||0, notReplied:+notRepliedW.n||0, total:(+repliedW.n||0)+(+notRepliedW.n||0) },
+        month: { from:mDates.from, to:mDates.to, replied:+repliedM.n||0, notReplied:+notRepliedM.n||0, total:(+repliedM.n||0)+(+notRepliedM.n||0) },
       },
-      weeklyRate:  weeklyRate.map(r=>({ period:r.week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
-      monthlyRate: monthlyRate.map(r=>({ period:r.month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      weeklyRate:  weeklyRate.map(row=>({ period:row.week,  total:+row.total, replied:+row.replied, notReplied:(+row.total)-(+row.replied) })),
+      monthlyRate: monthlyRate.map(row=>({ period:row.month, total:+row.total, replied:+row.replied, notReplied:(+row.total)-(+row.replied) })),
     });
   } catch(e) { console.error('/api/analytics:', e.message); res.status(500).json({ error: e.message }); }
 });
+
 
 // ─── Admin ────────────────────────────────────────────────
 app.get('/api/admin/agents', auth, adminOnly, async (req,res) => res.json(await all('SELECT id,username,name,role,color,totp_enabled FROM agents')));
