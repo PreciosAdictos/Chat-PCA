@@ -1,3 +1,4 @@
+// 30/03/2026
 // v3 - fix analytics - fix hora Madrid
 /**
  * WA Manager Pro — server.js
