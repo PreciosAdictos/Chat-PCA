@@ -928,23 +928,18 @@ app.get('/api/analytics', auth, async (req, res) => {
     }
 
     // Construir cláusulas SQL con parámetros posicionales independientes
-    function buildSessionClauses(startIdx = 1) {
-      const p = []; const c = { ac:'', fc:'', tc:'' };
-      if (aid)        { p.push(aid);        c.ac = `AND s.agent_id=$${startIdx + p.length - 1}`; }
-      if (dates.from) { p.push(dates.from); c.fc = `AND s.started_at::date >= $${startIdx + p.length - 1}::date`; }
-      if (dates.to)   { p.push(dates.to);   c.tc = `AND s.started_at::date <= $${startIdx + p.length - 1}::date`; }
-      return { params: p, ...c };
-    }
-    function buildReviewClauses(startIdx = 1) {
-      const p = []; const c = { rac:'', rc:'', rt:'' };
-      if (aid)        { p.push(aid);        c.rac = `AND s.agent_id=$${startIdx + p.length - 1}`; }
-      if (dates.from) { p.push(dates.from); c.rc  = `AND r.created_at::date >= $${startIdx + p.length - 1}::date`; }
-      if (dates.to)   { p.push(dates.to);   c.rt  = `AND r.created_at::date <= $${startIdx + p.length - 1}::date`; }
-      return { params: p, ...c };
+    function buildClauses(useReviewDate) {
+      const p = [];
+      const next = () => { return `$${p.length}`; };
+      let ac='', fc='', tc='', rac='', rc='', rt='';
+      if (aid)        { p.push(aid);        if (!useReviewDate) ac  = `AND s.agent_id=${next()}`; else rac = `AND s.agent_id=${next()}`; }
+      if (dates.from) { p.push(dates.from); if (!useReviewDate) fc  = `AND s.started_at::date >= ${next()}::date`; else rc = `AND r.created_at::date >= ${next()}::date`; }
+      if (dates.to)   { p.push(dates.to);   if (!useReviewDate) tc  = `AND s.started_at::date <= ${next()}::date`; else rt = `AND r.created_at::date <= ${next()}::date`; }
+      return { params: p, ac, fc, tc, rac, rc, rt };
     }
 
-    const s = buildSessionClauses(1);
-    const r = buildReviewClauses(1);
+    const s = buildClauses(false);
+    const r = buildClauses(true);
 
     const q = (sql, params) => pool.query(sql, params).then(res => res.rows.map(normalizeRow));
     const q1 = (sql, params) => pool.query(sql, params).then(res => normalizeRow(res.rows[0] || {}));
