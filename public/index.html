@@ -986,6 +986,10 @@ function applyCustomPeriod() {
 // ═══════════════════════════════════════════
 // SSE
 // ═══════════════════════════════════════════
+function isAnalyticsVisible() {
+  return document.getElementById('p-a')?.classList.contains('on');
+}
+
 function connectSSE() {
   if (sse) sse.close();
   sse = new EventSource(API+'/events', { headers: { Authorization: 'Bearer '+token } });
@@ -1000,20 +1004,26 @@ function connectSSE() {
     sessions[sessionId]=conv; renderList(); updatePip();
     if (activeId===sessionId) renderMsgs(conv);
     if (conv.unread) toast(`💬 ${conv.name}: ${(conv.preview||'').slice(0,40)}`);
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.addEventListener('review', e => {
     const {sessionId,conv}=JSON.parse(e.data);
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); }
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.addEventListener('sessionClosed', e => {
     const {sessionId,conv}=JSON.parse(e.data);
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); document.getElementById('btn-rev').style.display='none'; document.getElementById('btn-close').style.display='none'; }
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.onerror = () => { setLive(false); setTimeout(connectSSE, 4000); };
 }
 function setLive(ok) { document.getElementById('live').className='live'+(ok?' on':''); }
+
+// Auto-refresco analítica cada 30s si está visible
+setInterval(() => { if (isAnalyticsVisible()) loadAnalytics(); }, 30000);
 
 // ═══════════════════════════════════════════
 // CARGA
