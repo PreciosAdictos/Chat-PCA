@@ -927,22 +927,16 @@ app.get('/api/analytics', auth, async (req, res) => {
       const pd = periodDates(req.query.period); if (pd) dates = pd;
     }
 
-    // Construir cláusulas y parámetros independientes por tipo de query
-    // Para sessions (s)
+    // Parámetros independientes por tipo de query
     const sParams = []; let ac='', fc='', tc='';
     if (aid)        { sParams.push(aid);        ac = `AND s.agent_id=$${sParams.length}`; }
     if (dates.from) { sParams.push(dates.from); fc = `AND s.started_at::date >= $${sParams.length}::date`; }
     if (dates.to)   { sParams.push(dates.to);   tc = `AND s.started_at::date <= $${sParams.length}::date`; }
 
-    // Para reviews (r) — fechas basadas en created_at de reviews
     const rParams = []; let rac='', rc='', rt='';
     if (aid)        { rParams.push(aid);        rac = `AND s.agent_id=$${rParams.length}`; }
     if (dates.from) { rParams.push(dates.from); rc  = `AND r.created_at::date >= $${rParams.length}::date`; }
     if (dates.to)   { rParams.push(dates.to);   rt  = `AND r.created_at::date <= $${rParams.length}::date`; }
-
-    // Para agentRows (sin fechas de sesión, solo filtro agente)
-    const aParams = []; let aac='';
-    if (aid) { aParams.push(aid); aac = `AND s.agent_id=$${aParams.length}`; }
 
     const [summary, byQrows, agentRows, sessDay, revDay, topC, noReply] = await Promise.all([
       get(`SELECT COUNT(DISTINCT s.id) total_sessions, COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions, COUNT(DISTINCT CASE WHEN s.unread=1 AND s.status='active' THEN s.id END) unread, COUNT(DISTINCT c.phone) total_contacts, COUNT(r.id) total_reviews FROM sessions s JOIN contacts c ON c.phone=s.phone LEFT JOIN reviews r ON r.session_id=s.id WHERE 1=1 ${ac} ${fc} ${tc}`, sParams),
