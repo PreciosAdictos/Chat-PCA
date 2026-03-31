@@ -1004,7 +1004,7 @@ app.get('/api/analytics', auth, async (req, res) => {
     const agentRows = await q(`
       SELECT a.name, a.color, lr.quality, COUNT(*) n
       FROM (
-        SELECT DISTINCT ON (s2.id) s2.id session_id, r2.quality, r2.agent_id
+        SELECT DISTINCT ON (s2.id) s2.id session_id, s2.agent_id, r2.quality
         FROM sessions s2
         JOIN reviews r2 ON r2.session_id=s2.id
         WHERE s2.last_message_at::date >= $1::date
