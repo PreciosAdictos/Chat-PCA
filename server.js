@@ -995,18 +995,25 @@ app.get('/api/analytics', auth, async (req, res) => {
     `, rw.params);
 
     // ── Distribución por agente (última revisión de cada sesión) ──
+    // Construir cláusula para agentRows manualmente
+    const arParams = []; const arClauses = [];
+    if (aid)        { arParams.push(aid);        arClauses.push(`s2.agent_id=$${arParams.length}`); }
+    if (dates.from) { arParams.push(dates.from); arClauses.push(`s2.last_message_at::date >= $${arParams.length}::date`); }
+    if (dates.to)   { arParams.push(dates.to);   arClauses.push(`s2.last_message_at::date <= $${arParams.length}::date`); }
+    const arWhere = arClauses.length ? 'AND ' + arClauses.join(' AND ') : '';
     const agentRows = await q(`
       SELECT a.name, a.color, lr.quality, COUNT(*) n
       FROM (
-        SELECT DISTINCT ON (r.session_id) r.session_id, r.quality, r.agent_id, r.created_at
-        FROM reviews r
-        ORDER BY r.session_id, r.created_at DESC
+        SELECT DISTINCT ON (s2.id) s2.id session_id, r2.quality, r2.agent_id
+        FROM sessions s2
+        JOIN reviews r2 ON r2.session_id=s2.id
+        WHERE 1=1 ${arWhere}
+        ORDER BY s2.id, r2.created_at DESC
       ) lr
       JOIN agents a ON a.id=lr.agent_id
-      JOIN sessions s ON s.id=lr.session_id
-      WHERE a.role='agent' ${rw.where}
+      WHERE a.role='agent'
       GROUP BY a.name, a.color, lr.quality
-    `, rw.params);
+    `, arParams);
 
     // ── Revisiones por día ────────────────────────────────
     const revDay = await q(`
