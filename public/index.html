@@ -635,10 +635,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
 
     <!-- KPIs -->
     <div class="kg">
-      <div class="kpi"><div class="kpi-l">Sesiones activas</div><div class="kpi-v g" id="k-act">—</div><div class="kpi-s">sin cerrar</div></div>
-      <div class="kpi"><div class="kpi-l">Contactos únicos</div><div class="kpi-v"   id="k-con">—</div><div class="kpi-s">históricas</div></div>
+      <div class="kpi"><div class="kpi-l">Conversaciones</div><div class="kpi-v g" id="k-tot">—</div><div class="kpi-s">este período</div></div>
+      <div class="kpi"><div class="kpi-l">Con mensajes</div><div class="kpi-v"   id="k-msg">—</div><div class="kpi-s">cliente o agente</div></div>
       <div class="kpi"><div class="kpi-l">Revisiones total</div><div class="kpi-v"   id="k-rev">—</div><div class="kpi-s">todas las sesiones</div></div>
-      <div class="kpi"><div class="kpi-l">Este mes</div><div class="kpi-v g"         id="k-mon">—</div><div class="kpi-s">nuevas sesiones</div></div>
       <div class="kpi"><div class="kpi-l">Alta</div><div class="kpi-v g"             id="k-alt">—</div><div class="kpi-s">revisiones</div></div>
       <div class="kpi"><div class="kpi-l">Media</div><div class="kpi-v a"            id="k-med">—</div><div class="kpi-s">revisiones</div></div>
       <div class="kpi"><div class="kpi-l">Baja</div><div class="kpi-v r"             id="k-baj">—</div><div class="kpi-s">revisiones</div></div>
@@ -1511,10 +1510,9 @@ function buildLocalAnalytics() {
 function setAF(f,el){afF=f;document.querySelectorAll('.afb').forEach(b=>b.classList.remove('on'));el.classList.add('on');loadAnalytics();}
 
 function renderAnalytics(d) {
-  document.getElementById('k-act').textContent=d.summary.active_sessions||0;
-  document.getElementById('k-con').textContent=d.summary.total_contacts||0;
+  document.getElementById('k-tot').textContent=d.summary.total_sessions||0;
+  document.getElementById('k-msg').textContent=d.summary.with_messages||0;
   document.getElementById('k-rev').textContent=d.summary.total_reviews||0;
-  document.getElementById('k-mon').textContent=d.summary.thisMonth||0;
   document.getElementById('k-alt').textContent=d.byQuality?.alta||0;
   document.getElementById('k-med').textContent=d.byQuality?.media||0;
   document.getElementById('k-baj').textContent=d.byQuality?.baja||0;
