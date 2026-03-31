@@ -966,7 +966,7 @@ app.get('/api/analytics', auth, async (req, res) => {
       return { params: p, where: clauses.length ? 'AND ' + clauses.join(' AND ') : '' };
     }
 
-    const sw = buildWhere({ fromField:'s.started_at', toField:'s.started_at' });
+    const sw = buildWhere({ fromField:'s.last_message_at', toField:'s.last_message_at' });
     const rw = buildWhere({ fromField:'r.created_at', toField:'r.created_at' });
 
     // ── KPIs principales ──────────────────────────────────
@@ -1096,7 +1096,7 @@ app.get('/api/analytics', auth, async (req, res) => {
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
           ) THEN s.id END) replied
         FROM sessions s
-        WHERE s.started_at >= NOW()-INTERVAL '90 days'
+        WHERE s.last_message_at >= NOW()-INTERVAL '90 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
         GROUP BY period_week ORDER BY period_week ASC
@@ -1108,7 +1108,7 @@ app.get('/api/analytics', auth, async (req, res) => {
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
           ) THEN s.id END) replied
         FROM sessions s
-        WHERE s.started_at >= NOW()-INTERVAL '365 days'
+        WHERE s.last_message_at >= NOW()-INTERVAL '365 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
         GROUP BY period_month ORDER BY period_month ASC
