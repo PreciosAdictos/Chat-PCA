@@ -1102,7 +1102,7 @@ app.get('/api/analytics', auth, async (req, res) => {
     // ── Evolución semanal y mensual ───────────────────────
     const [weeklyRate, monthlyRate] = await Promise.all([
       q(`
-        SELECT TO_CHAR(s.started_at,'IYYY-IW') week, COUNT(DISTINCT s.id) total,
+        SELECT TO_CHAR(s.started_at,'IYYY-IW') AS period_week, COUNT(DISTINCT s.id) total,
           COUNT(DISTINCT CASE WHEN EXISTS(
             SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
@@ -1111,10 +1111,10 @@ app.get('/api/analytics', auth, async (req, res) => {
         WHERE s.started_at >= NOW()-INTERVAL '90 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-        GROUP BY week ORDER BY week ASC
+        GROUP BY period_week ORDER BY period_week ASC
       `, sw.params),
       q(`
-        SELECT TO_CHAR(s.started_at,'YYYY-MM') month, COUNT(DISTINCT s.id) total,
+        SELECT TO_CHAR(s.started_at,'YYYY-MM') AS period_month, COUNT(DISTINCT s.id) total,
           COUNT(DISTINCT CASE WHEN EXISTS(
             SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
@@ -1123,7 +1123,7 @@ app.get('/api/analytics', auth, async (req, res) => {
         WHERE s.started_at >= NOW()-INTERVAL '365 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-        GROUP BY month ORDER BY month ASC
+        GROUP BY period_month ORDER BY period_month ASC
       `, sw.params),
     ]);
 
@@ -1174,8 +1174,8 @@ app.get('/api/analytics', auth, async (req, res) => {
         week:  { from:wDates.from, to:wDates.to, replied:+repliedW.n||0,  notReplied:+notRepliedW.n||0,  total:(+repliedW.n||0)+(+notRepliedW.n||0) },
         month: { from:mDates.from, to:mDates.to, replied:+repliedM.n||0, notReplied:+notRepliedM.n||0, total:(+repliedM.n||0)+(+notRepliedM.n||0) },
       },
-      weeklyRate:  weeklyRate.map(r  => ({ period:r.week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
-      monthlyRate: monthlyRate.map(r => ({ period:r.month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      weeklyRate:  weeklyRate.map(r  => ({ period:r.period_week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      monthlyRate: monthlyRate.map(r => ({ period:r.period_month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
     });
   } catch(e) { console.error('/api/analytics:', e.message); res.status(500).json({ error: e.message }); }
 });
