@@ -1063,36 +1063,37 @@ app.get('/api/analytics', auth, async (req, res) => {
       ORDER BY days_waiting DESC
     `, noReplyW.params);
 
-    // ── Respondidos vs No respondidos (mismo período que el filtro) ──
-    // Respondido: agente escribió Y cliente respondió en algún momento después
-    // No respondido: agente escribió Y cliente no respondió en 3 días
-    const rrP = []; const rrClauses = [];
-    if (aid)        { rrP.push(aid);        rrClauses.push(`s.agent_id=$${rrP.length}`); }
-    if (dates.from) { rrP.push(dates.from); rrClauses.push(`s.last_message_at::date >= $${rrP.length}::date`); }
-    if (dates.to)   { rrP.push(dates.to);   rrClauses.push(`s.last_message_at::date <= $${rrP.length}::date`); }
-    const rrWhere = rrClauses.length ? 'AND ' + rrClauses.join(' AND ') : '';
-
-    const [repliedW, notRepliedW] = await Promise.all([
-      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s
-          WHERE 1=1 ${rrWhere}
-          AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-          AND EXISTS(
-            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
-            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-          )`, rrP),
-      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s
-          WHERE 1=1 ${rrWhere}
-          AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-          AND NOT EXISTS(
-            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
-            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-          )
-          AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`, rrP),
-    ]);
-    const repliedM = repliedW; const notRepliedM = notRepliedW;
+    // ── Respondidos vs No respondidos ──────────────────────
+    // Siempre fijos: últimos 7 días y últimos 30 días
     const now = new Date();
-    const wDates = dates.from ? dates : { from: new Date(now-7*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
-    const mDates = wDates;
+    const wDates = { from: new Date(now-7*86400000).toISOString().slice(0,10),  to: now.toISOString().slice(0,10) };
+    const mDates = { from: new Date(now-30*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
+
+    const rrQuery = (from, to, replied) => {
+      const p = [from, to];
+      const agentClause = aid ? `AND s.agent_id=$${p.push(aid) && p.length}` : '';
+      const clientReplied = replied
+        ? `AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`
+        : `AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))
+           AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`;
+      return q1(`
+        SELECT COUNT(DISTINCT s.id) n FROM sessions s
+        WHERE s.last_message_at::date >= $1::date
+        AND   s.last_message_at::date <= $2::date
+        ${agentClause}
+        AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+        ${clientReplied}
+      `, p);
+    };
+
+    const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
+      rrQuery(wDates.from, wDates.to, true),
+      rrQuery(wDates.from, wDates.to, false),
+      rrQuery(mDates.from, mDates.to, true),
+      rrQuery(mDates.from, mDates.to, false),
+    ]);
 
     // ── Evolución semanal y mensual ───────────────────────
     const [weeklyRate, monthlyRate] = await Promise.all([
