@@ -366,9 +366,9 @@ function periodDates(period) {
   const now   = new Date();
   const today = now.toISOString().slice(0, 10);
   if (period === 'today')   return { from: today, to: today };
-  if (period === 'week')    { const d=new Date(now); d.setDate(d.getDate()-10); return { from: d.toISOString().slice(0,10), to: today }; }
-  if (period === 'month')   { const d=new Date(now); d.setDate(d.getDate()-33); return { from: d.toISOString().slice(0,10), to: today }; }
-  if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-93); return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'week')    { const d=new Date(now); d.setDate(d.getDate()-7);  return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'month')   { const d=new Date(now); d.setDate(d.getDate()-30); return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-90); return { from: d.toISOString().slice(0,10), to: today }; }
   return null;
 }
 
