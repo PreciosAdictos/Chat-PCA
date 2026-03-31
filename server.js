@@ -994,20 +994,22 @@ app.get('/api/analytics', auth, async (req, res) => {
       GROUP BY r.quality
     `, rw.params);
 
-    // ── Distribución por agente (última revisión de cada sesión) ──
-    // Construir cláusula para agentRows manualmente
-    const arParams = []; const arClauses = [];
-    if (aid)        { arParams.push(aid);        arClauses.push(`s2.agent_id=$${arParams.length}`); }
-    if (dates.from) { arParams.push(dates.from); arClauses.push(`s2.last_message_at::date >= $${arParams.length}::date`); }
-    if (dates.to)   { arParams.push(dates.to);   arClauses.push(`s2.last_message_at::date <= $${arParams.length}::date`); }
-    const arWhere = arClauses.length ? 'AND ' + arClauses.join(' AND ') : '';
+    // ── Distribución por agente (últimos 30 días, última revisión por sesión) ──
+    const agentFrom30 = new Date(); agentFrom30.setDate(agentFrom30.getDate()-30);
+    const agentFromStr = agentFrom30.toISOString().slice(0,10);
+    const agentToStr   = new Date().toISOString().slice(0,10);
+    const arParams = [agentFromStr, agentToStr];
+    if (aid) arParams.push(aid);
+    const arAgentClause = aid ? `AND s2.agent_id=$${arParams.length}` : '';
     const agentRows = await q(`
       SELECT a.name, a.color, lr.quality, COUNT(*) n
       FROM (
         SELECT DISTINCT ON (s2.id) s2.id session_id, r2.quality, r2.agent_id
         FROM sessions s2
         JOIN reviews r2 ON r2.session_id=s2.id
-        WHERE 1=1 ${arWhere}
+        WHERE s2.last_message_at::date >= $1::date
+        AND   s2.last_message_at::date <= $2::date
+        ${arAgentClause}
         ORDER BY s2.id, r2.created_at DESC
       ) lr
       JOIN agents a ON a.id=lr.agent_id
@@ -1153,6 +1155,7 @@ app.get('/api/analytics', auth, async (req, res) => {
       },
       byQuality: Object.fromEntries(byQrows.map(r => [r.quality, +r.n])),
       byAgent,
+      byAgentPeriod: { from: agentFromStr, to: agentToStr },
       qualityPerDay: Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b)).map(([day,v])=>({day,...v})),
       agents: req.user.role==='admin' ? (await pool.query('SELECT id,username,name,role,color FROM agents')).rows : [],
       noReply: noReply.map(r => ({
