@@ -973,30 +973,18 @@ app.get('/api/analytics', auth, async (req, res) => {
     const summary = await q1(`
       SELECT
         COUNT(DISTINCT s.id) total_sessions,
-        COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions,
-        COUNT(DISTINCT c.phone) total_contacts,
         COUNT(DISTINCT r.id) total_reviews
       FROM sessions s
-      JOIN contacts c ON c.phone=s.phone
       LEFT JOIN reviews r ON r.session_id=s.id
       WHERE 1=1 ${sw.where}
     `, sw.params);
 
-    // Sesiones activas reales: status=active (auto-cerradas tras 48h)
-    const activeSessions = await q1(`
-      SELECT COUNT(*) n FROM sessions
-      WHERE status='active'
-      AND started_at >= NOW() - INTERVAL '30 days'
-      ${aid ? `AND agent_id=$1` : ''}
-    `, aid ? [aid] : []);
-
-    // Este mes
-    const thisMonthW = buildWhere({ fromField:'started_at', toField:'started_at' });
-    const thisMonth = await q1(`
-      SELECT COUNT(*) n FROM sessions
-      WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM')
-      ${aid ? `AND agent_id=$${thisMonthW.params.indexOf(aid)+1}` : ''}
-    `, aid ? [aid] : []);
+    // Conversaciones con al menos un mensaje (cliente o agente) en el período
+    const withMessages = await q1(`
+      SELECT COUNT(DISTINCT s.id) n FROM sessions s
+      WHERE 1=1 ${sw.where}
+      AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('in','out','bot'))
+    `, sw.params);
 
     // ── Distribución por calidad ──────────────────────────
     const byQrows = await q(`
@@ -1149,10 +1137,8 @@ app.get('/api/analytics', auth, async (req, res) => {
       period: dates,
       summary: {
         total_sessions:   +summary.total_sessions  || 0,
-        active_sessions:  +activeSessions.n        || 0,
-        total_contacts:   +summary.total_contacts  || 0,
         total_reviews:    +summary.total_reviews   || 0,
-        thisMonth:        +thisMonth.n             || 0,
+        with_messages:    +withMessages.n          || 0,
       },
       byQuality: Object.fromEntries(byQrows.map(r => [r.quality, +r.n])),
       byAgent,
