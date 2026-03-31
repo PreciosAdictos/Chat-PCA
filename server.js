@@ -366,9 +366,9 @@ function periodDates(period) {
   const now   = new Date();
   const today = now.toISOString().slice(0, 10);
   if (period === 'today')   return { from: today, to: today };
-  if (period === 'week')    { const d=new Date(now); d.setDate(d.getDate()-10); return { from: d.toISOString().slice(0,10), to: today }; }
-  if (period === 'month')   { const d=new Date(now); d.setDate(d.getDate()-33); return { from: d.toISOString().slice(0,10), to: today }; }
-  if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-93); return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'week')    { const d=new Date(now); d.setDate(d.getDate()-7);  return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'month')   { const d=new Date(now); d.setDate(d.getDate()-30); return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-90); return { from: d.toISOString().slice(0,10), to: today }; }
   return null;
 }
 
@@ -966,37 +966,25 @@ app.get('/api/analytics', auth, async (req, res) => {
       return { params: p, where: clauses.length ? 'AND ' + clauses.join(' AND ') : '' };
     }
 
-    const sw = buildWhere({ fromField:'s.started_at', toField:'s.started_at' });
+    const sw = buildWhere({ fromField:'s.last_message_at', toField:'s.last_message_at' });
     const rw = buildWhere({ fromField:'r.created_at', toField:'r.created_at' });
 
     // ── KPIs principales ──────────────────────────────────
     const summary = await q1(`
       SELECT
         COUNT(DISTINCT s.id) total_sessions,
-        COUNT(DISTINCT CASE WHEN s.status='active' THEN s.id END) active_sessions,
-        COUNT(DISTINCT c.phone) total_contacts,
         COUNT(DISTINCT r.id) total_reviews
       FROM sessions s
-      JOIN contacts c ON c.phone=s.phone
       LEFT JOIN reviews r ON r.session_id=s.id
       WHERE 1=1 ${sw.where}
     `, sw.params);
 
-    // Sesiones activas reales: status=active (auto-cerradas tras 48h)
-    const activeSessions = await q1(`
-      SELECT COUNT(*) n FROM sessions
-      WHERE status='active'
-      AND started_at >= NOW() - INTERVAL '30 days'
-      ${aid ? `AND agent_id=$1` : ''}
-    `, aid ? [aid] : []);
-
-    // Este mes
-    const thisMonthW = buildWhere({ fromField:'started_at', toField:'started_at' });
-    const thisMonth = await q1(`
-      SELECT COUNT(*) n FROM sessions
-      WHERE TO_CHAR(started_at,'YYYY-MM')=TO_CHAR(NOW(),'YYYY-MM')
-      ${aid ? `AND agent_id=$${thisMonthW.params.indexOf(aid)+1}` : ''}
-    `, aid ? [aid] : []);
+    // Conversaciones con al menos un mensaje (cliente o agente) en el período
+    const withMessages = await q1(`
+      SELECT COUNT(DISTINCT s.id) n FROM sessions s
+      WHERE 1=1 ${sw.where}
+      AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('in','out','bot'))
+    `, sw.params);
 
     // ── Distribución por calidad ──────────────────────────
     const byQrows = await q(`
@@ -1006,15 +994,28 @@ app.get('/api/analytics', auth, async (req, res) => {
       GROUP BY r.quality
     `, rw.params);
 
-    // ── Distribución por agente ───────────────────────────
+    // ── Distribución por agente (últimos 30 días, última revisión por sesión) ──
+    const agentFrom30 = new Date(); agentFrom30.setDate(agentFrom30.getDate()-30);
+    const agentFromStr = agentFrom30.toISOString().slice(0,10);
+    const agentToStr   = new Date().toISOString().slice(0,10);
+    const arParams = [agentFromStr, agentToStr];
+    if (aid) arParams.push(aid);
+    const arAgentClause = aid ? `AND s2.agent_id=$${arParams.length}` : '';
     const agentRows = await q(`
-      SELECT a.name, a.color, r.quality, COUNT(*) n
-      FROM reviews r
-      JOIN agents a ON a.id=r.agent_id
-      JOIN sessions s ON s.id=r.session_id
-      WHERE a.role='agent' ${rw.where}
-      GROUP BY a.name, a.color, r.quality
-    `, rw.params);
+      SELECT a.name, a.color, lr.quality, COUNT(*) n
+      FROM (
+        SELECT DISTINCT ON (s2.id) s2.id session_id, s2.agent_id, r2.quality
+        FROM sessions s2
+        JOIN reviews r2 ON r2.session_id=s2.id
+        WHERE s2.last_message_at::date >= $1::date
+        AND   s2.last_message_at::date <= $2::date
+        ${arAgentClause}
+        ORDER BY s2.id, r2.created_at DESC
+      ) lr
+      JOIN agents a ON a.id=lr.agent_id
+      WHERE a.role='agent'
+      GROUP BY a.name, a.color, lr.quality
+    `, arParams);
 
     // ── Revisiones por día ────────────────────────────────
     const revDay = await q(`
@@ -1062,30 +1063,25 @@ app.get('/api/analytics', auth, async (req, res) => {
       ORDER BY days_waiting DESC
     `, noReplyW.params);
 
-    // ── Respondidos vs No respondidos ─────────────────────
-    // Regla: agente escribe primero → cliente responde en 3 días = respondido
-    // Semana anterior y mes anterior (fijos), filtrables por período
+    // ── Respondidos vs No respondidos ──────────────────────
+    // Siempre fijos: últimos 7 días y últimos 30 días
     const now = new Date();
-    const dayOfWeek = now.getUTCDay() || 7;
-    const prevMonday = new Date(now); prevMonday.setUTCDate(now.getUTCDate() - dayOfWeek - 6);
-    const prevSunday = new Date(now); prevSunday.setUTCDate(now.getUTCDate() - dayOfWeek);
-    const wDates = { from: prevMonday.toISOString().slice(0,10), to: prevSunday.toISOString().slice(0,10) };
-    const prevMonth = new Date(now.getUTCFullYear(), now.getUTCMonth()-1, 1);
-    const prevMonthEnd = new Date(now.getUTCFullYear(), now.getUTCMonth(), 0);
-    const mDates = { from: prevMonth.toISOString().slice(0,10), to: prevMonthEnd.toISOString().slice(0,10) };
+    const wDates = { from: new Date(now-7*86400000).toISOString().slice(0,10),  to: now.toISOString().slice(0,10) };
+    const mDates = { from: new Date(now-30*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
 
-    // Respondido: agente escribió Y cliente respondió en algún momento después (3 días)
-    // No respondido: agente escribió Y cliente NO respondió en 3 días
     const rrQuery = (from, to, replied) => {
       const p = [from, to];
       const agentClause = aid ? `AND s.agent_id=$${p.push(aid) && p.length}` : '';
       const clientReplied = replied
-        ? `AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`
-        : `AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`;
+        ? `AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`
+        : `AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))
+           AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`;
       return q1(`
         SELECT COUNT(DISTINCT s.id) n FROM sessions s
-        WHERE s.started_at::date >= $1::date
-        AND s.started_at::date <= $2::date
+        WHERE s.last_message_at::date >= $1::date
+        AND   s.last_message_at::date <= $2::date
         ${agentClause}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
         ${clientReplied}
@@ -1102,28 +1098,28 @@ app.get('/api/analytics', auth, async (req, res) => {
     // ── Evolución semanal y mensual ───────────────────────
     const [weeklyRate, monthlyRate] = await Promise.all([
       q(`
-        SELECT TO_CHAR(s.started_at,'IYYY-IW') week, COUNT(DISTINCT s.id) total,
+        SELECT TO_CHAR(s.started_at,'IYYY-IW') AS period_week, COUNT(DISTINCT s.id) total,
           COUNT(DISTINCT CASE WHEN EXISTS(
             SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
           ) THEN s.id END) replied
         FROM sessions s
-        WHERE s.started_at >= NOW()-INTERVAL '90 days'
+        WHERE s.last_message_at >= NOW()-INTERVAL '90 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-        GROUP BY week ORDER BY week ASC
+        GROUP BY period_week ORDER BY period_week ASC
       `, sw.params),
       q(`
-        SELECT TO_CHAR(s.started_at,'YYYY-MM') month, COUNT(DISTINCT s.id) total,
+        SELECT TO_CHAR(s.started_at,'YYYY-MM') AS period_month, COUNT(DISTINCT s.id) total,
           COUNT(DISTINCT CASE WHEN EXISTS(
             SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
             AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
           ) THEN s.id END) replied
         FROM sessions s
-        WHERE s.started_at >= NOW()-INTERVAL '365 days'
+        WHERE s.last_message_at >= NOW()-INTERVAL '365 days'
         ${sw.where}
         AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-        GROUP BY month ORDER BY month ASC
+        GROUP BY period_month ORDER BY period_month ASC
       `, sw.params),
     ]);
 
@@ -1149,13 +1145,12 @@ app.get('/api/analytics', auth, async (req, res) => {
       period: dates,
       summary: {
         total_sessions:   +summary.total_sessions  || 0,
-        active_sessions:  +activeSessions.n        || 0,
-        total_contacts:   +summary.total_contacts  || 0,
         total_reviews:    +summary.total_reviews   || 0,
-        thisMonth:        +thisMonth.n             || 0,
+        with_messages:    +withMessages.n          || 0,
       },
       byQuality: Object.fromEntries(byQrows.map(r => [r.quality, +r.n])),
       byAgent,
+      byAgentPeriod: { from: agentFromStr, to: agentToStr },
       qualityPerDay: Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b)).map(([day,v])=>({day,...v})),
       agents: req.user.role==='admin' ? (await pool.query('SELECT id,username,name,role,color FROM agents')).rows : [],
       noReply: noReply.map(r => ({
@@ -1174,8 +1169,8 @@ app.get('/api/analytics', auth, async (req, res) => {
         week:  { from:wDates.from, to:wDates.to, replied:+repliedW.n||0,  notReplied:+notRepliedW.n||0,  total:(+repliedW.n||0)+(+notRepliedW.n||0) },
         month: { from:mDates.from, to:mDates.to, replied:+repliedM.n||0, notReplied:+notRepliedM.n||0, total:(+repliedM.n||0)+(+notRepliedM.n||0) },
       },
-      weeklyRate:  weeklyRate.map(r  => ({ period:r.week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
-      monthlyRate: monthlyRate.map(r => ({ period:r.month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      weeklyRate:  weeklyRate.map(r  => ({ period:r.period_week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      monthlyRate: monthlyRate.map(r => ({ period:r.period_month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
     });
   } catch(e) { console.error('/api/analytics:', e.message); res.status(500).json({ error: e.message }); }
 });
