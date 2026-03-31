@@ -620,9 +620,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
     <!-- Selector de período -->
     <div>
       <div class="period-sel">
-        <button class="ps-btn on" onclick="setPeriod('week',this)">Esta semana +3d</button>
-        <button class="ps-btn"    onclick="setPeriod('month',this)">Este mes +3d</button>
-        <button class="ps-btn"    onclick="setPeriod('quarter',this)">3 meses</button>
+        <button class="ps-btn on" onclick="setPeriod('week',this)">Últimos 7 días</button>
+        <button class="ps-btn"    onclick="setPeriod('month',this)">Últimos 30 días</button>
+        <button class="ps-btn"    onclick="setPeriod('quarter',this)">Últimos 90 días</button>
         <button class="ps-btn"    onclick="setPeriod('custom',this)">Personalizado</button>
       </div>
       <div class="ps-custom" id="ps-custom">
@@ -635,10 +635,9 @@ textarea.ip-note::placeholder{color:var(--t3)}
 
     <!-- KPIs -->
     <div class="kg">
-      <div class="kpi"><div class="kpi-l">Sesiones activas</div><div class="kpi-v g" id="k-act">—</div><div class="kpi-s">sin cerrar</div></div>
-      <div class="kpi"><div class="kpi-l">Contactos únicos</div><div class="kpi-v"   id="k-con">—</div><div class="kpi-s">históricas</div></div>
+      <div class="kpi"><div class="kpi-l">Conversaciones</div><div class="kpi-v g" id="k-tot">—</div><div class="kpi-s">este período</div></div>
+      <div class="kpi"><div class="kpi-l">Con mensajes</div><div class="kpi-v"   id="k-msg">—</div><div class="kpi-s">cliente o agente</div></div>
       <div class="kpi"><div class="kpi-l">Revisiones total</div><div class="kpi-v"   id="k-rev">—</div><div class="kpi-s">todas las sesiones</div></div>
-      <div class="kpi"><div class="kpi-l">Este mes</div><div class="kpi-v g"         id="k-mon">—</div><div class="kpi-s">nuevas sesiones</div></div>
       <div class="kpi"><div class="kpi-l">Alta</div><div class="kpi-v g"             id="k-alt">—</div><div class="kpi-s">revisiones</div></div>
       <div class="kpi"><div class="kpi-l">Media</div><div class="kpi-v a"            id="k-med">—</div><div class="kpi-s">revisiones</div></div>
       <div class="kpi"><div class="kpi-l">Baja</div><div class="kpi-v r"             id="k-baj">—</div><div class="kpi-s">revisiones</div></div>
@@ -662,7 +661,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
       <div class="cct">Respondidos vs Sin respuesta <span>semana anterior y mes anterior</span></div>
       <div class="rr-grid" id="rr-grid">
         <div class="rr-card">
-          <div class="rr-title" id="rr-w-title">Semana anterior</div>
+          <div class="rr-title" id="rr-w-title">Últimos 7 días</div>
           <div class="rr-donut">
             <canvas id="rr-week-chart" width="80" height="80"></canvas>
             <div>
@@ -676,7 +675,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
           </div>
         </div>
         <div class="rr-card">
-          <div class="rr-title" id="rr-m-title">Mes anterior</div>
+          <div class="rr-title" id="rr-m-title">Últimos 30 días</div>
           <div class="rr-donut">
             <canvas id="rr-month-chart" width="80" height="80"></canvas>
             <div>
@@ -692,25 +691,6 @@ textarea.ip-note::placeholder{color:var(--t3)}
       </div>
     </div>
 
-    <!-- Evolución semanal y mensual -->
-    <div class="cg">
-      <div class="cc"><div class="cct">Evolución semanal <span>últimas 8 semanas</span></div><div class="cw"><canvas id="ch-weekly"></canvas></div></div>
-      <div class="cc"><div class="cct">Evolución mensual <span>últimos 6 meses</span></div><div class="cw"><canvas id="ch-monthly"></canvas></div></div>
-    </div>
-
-    <!-- Sin respuesta -->
-    <div class="cc wide">
-      <div class="cct" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Sin respuesta <span style="font-size:10px;font-weight:400;color:var(--t3)">último mensaje nuestro, cliente sin contestar +3 días</span></span>
-        <span id="nr-count" style="font-size:11px;font-weight:700;color:var(--R)"></span>
-      </div>
-      <div class="tw">
-        <table class="nr-table" id="nr-table">
-          <thead><tr><th>Contacto</th><th>Agente</th><th>Nuestro último mensaje</th><th>Esperando</th><th>Acción</th></tr></thead>
-          <tbody id="nr-tbody"></tbody>
-        </table>
-      </div>
-    </div>
   </div>
 
   <!-- ══ ADMIN ══ -->
@@ -986,6 +966,10 @@ function applyCustomPeriod() {
 // ═══════════════════════════════════════════
 // SSE
 // ═══════════════════════════════════════════
+function isAnalyticsVisible() {
+  return document.getElementById('p-a')?.classList.contains('on');
+}
+
 function connectSSE() {
   if (sse) sse.close();
   sse = new EventSource(API+'/events', { headers: { Authorization: 'Bearer '+token } });
@@ -1000,20 +984,26 @@ function connectSSE() {
     sessions[sessionId]=conv; renderList(); updatePip();
     if (activeId===sessionId) renderMsgs(conv);
     if (conv.unread) toast(`💬 ${conv.name}: ${(conv.preview||'').slice(0,40)}`);
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.addEventListener('review', e => {
     const {sessionId,conv}=JSON.parse(e.data);
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); }
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.addEventListener('sessionClosed', e => {
     const {sessionId,conv}=JSON.parse(e.data);
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); document.getElementById('btn-rev').style.display='none'; document.getElementById('btn-close').style.display='none'; }
+    if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.onerror = () => { setLive(false); setTimeout(connectSSE, 4000); };
 }
 function setLive(ok) { document.getElementById('live').className='live'+(ok?' on':''); }
+
+// Auto-refresco analítica cada 30s si está visible
+setInterval(() => { if (isAnalyticsVisible()) loadAnalytics(); }, 30000);
 
 // ═══════════════════════════════════════════
 // CARGA
@@ -1501,10 +1491,9 @@ function buildLocalAnalytics() {
 function setAF(f,el){afF=f;document.querySelectorAll('.afb').forEach(b=>b.classList.remove('on'));el.classList.add('on');loadAnalytics();}
 
 function renderAnalytics(d) {
-  document.getElementById('k-act').textContent=d.summary.active_sessions||0;
-  document.getElementById('k-con').textContent=d.summary.total_contacts||0;
+  document.getElementById('k-tot').textContent=d.summary.total_sessions||0;
+  document.getElementById('k-msg').textContent=d.summary.with_messages||0;
   document.getElementById('k-rev').textContent=d.summary.total_reviews||0;
-  document.getElementById('k-mon').textContent=d.summary.thisMonth||0;
   document.getElementById('k-alt').textContent=d.byQuality?.alta||0;
   document.getElementById('k-med').textContent=d.byQuality?.media||0;
   document.getElementById('k-baj').textContent=d.byQuality?.baja||0;
@@ -1526,7 +1515,9 @@ function renderAnalytics(d) {
   // Tabla por agente
   const byAg=d.byAgent||{};
   const agNames=Object.keys(byAg);
-  document.getElementById('ag-chart-lbl').textContent=me.role==='admin'?'· todos los agentes':'';
+  document.getElementById('ag-chart-lbl').textContent = d.byAgentPeriod
+    ? `· últimos 30 días (${d.byAgentPeriod.from} → ${d.byAgentPeriod.to})`
+    : (me.role==='admin'?'· todos los agentes':'');
   document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{
     const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);
     return`<tr><td style="font-weight:600;color:${v.color||'var(--t)'}">${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td class="mn">${tot}</td></tr>`;
