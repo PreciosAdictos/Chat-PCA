@@ -1063,42 +1063,36 @@ app.get('/api/analytics', auth, async (req, res) => {
       ORDER BY days_waiting DESC
     `, noReplyW.params);
 
-    // ── Respondidos vs No respondidos ─────────────────────
-    // Regla: agente escribe primero → cliente responde en 3 días = respondido
-    // Semana anterior y mes anterior (fijos), filtrables por período
-    const now = new Date();
-    const dayOfWeek = now.getUTCDay() || 7;
-    const prevMonday = new Date(now); prevMonday.setUTCDate(now.getUTCDate() - dayOfWeek - 6);
-    const prevSunday = new Date(now); prevSunday.setUTCDate(now.getUTCDate() - dayOfWeek);
-    const wDates = { from: prevMonday.toISOString().slice(0,10), to: prevSunday.toISOString().slice(0,10) };
-    const prevMonth = new Date(now.getUTCFullYear(), now.getUTCMonth()-1, 1);
-    const prevMonthEnd = new Date(now.getUTCFullYear(), now.getUTCMonth(), 0);
-    const mDates = { from: prevMonth.toISOString().slice(0,10), to: prevMonthEnd.toISOString().slice(0,10) };
+    // ── Respondidos vs No respondidos (mismo período que el filtro) ──
+    // Respondido: agente escribió Y cliente respondió en algún momento después
+    // No respondido: agente escribió Y cliente no respondió en 3 días
+    const rrP = []; const rrClauses = [];
+    if (aid)        { rrP.push(aid);        rrClauses.push(`s.agent_id=$${rrP.length}`); }
+    if (dates.from) { rrP.push(dates.from); rrClauses.push(`s.last_message_at::date >= $${rrP.length}::date`); }
+    if (dates.to)   { rrP.push(dates.to);   rrClauses.push(`s.last_message_at::date <= $${rrP.length}::date`); }
+    const rrWhere = rrClauses.length ? 'AND ' + rrClauses.join(' AND ') : '';
 
-    // Respondido: agente escribió Y cliente respondió en algún momento después (3 días)
-    // No respondido: agente escribió Y cliente NO respondió en 3 días
-    const rrQuery = (from, to, replied) => {
-      const p = [from, to];
-      const agentClause = aid ? `AND s.agent_id=$${p.push(aid) && p.length}` : '';
-      const clientReplied = replied
-        ? `AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`
-        : `AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in' AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))) AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`;
-      return q1(`
-        SELECT COUNT(DISTINCT s.id) n FROM sessions s
-        WHERE s.started_at::date >= $1::date
-        AND s.started_at::date <= $2::date
-        ${agentClause}
-        AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
-        ${clientReplied}
-      `, p);
-    };
-
-    const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
-      rrQuery(wDates.from, wDates.to, true),
-      rrQuery(wDates.from, wDates.to, false),
-      rrQuery(mDates.from, mDates.to, true),
-      rrQuery(mDates.from, mDates.to, false),
+    const [repliedW, notRepliedW] = await Promise.all([
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s
+          WHERE 1=1 ${rrWhere}
+          AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          AND EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          )`, rrP),
+      q1(`SELECT COUNT(DISTINCT s.id) n FROM sessions s
+          WHERE 1=1 ${rrWhere}
+          AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          AND NOT EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          )
+          AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`, rrP),
     ]);
+    const repliedM = repliedW; const notRepliedM = notRepliedW;
+    const now = new Date();
+    const wDates = dates.from ? dates : { from: new Date(now-7*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
+    const mDates = wDates;
 
     // ── Evolución semanal y mensual ───────────────────────
     const [weeklyRate, monthlyRate] = await Promise.all([
