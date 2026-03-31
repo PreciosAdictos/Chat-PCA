@@ -1534,7 +1534,9 @@ function renderAnalytics(d) {
   // Tabla por agente
   const byAg=d.byAgent||{};
   const agNames=Object.keys(byAg);
-  document.getElementById('ag-chart-lbl').textContent=me.role==='admin'?'· todos los agentes':'';
+  document.getElementById('ag-chart-lbl').textContent = d.byAgentPeriod
+    ? `· últimos 30 días (${d.byAgentPeriod.from} → ${d.byAgentPeriod.to})`
+    : (me.role==='admin'?'· todos los agentes':'');
   document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{
     const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);
     return`<tr><td style="font-weight:600;color:${v.color||'var(--t)'}">${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td class="mn">${tot}</td></tr>`;
