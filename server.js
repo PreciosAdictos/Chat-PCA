@@ -994,14 +994,18 @@ app.get('/api/analytics', auth, async (req, res) => {
       GROUP BY r.quality
     `, rw.params);
 
-    // ── Distribución por agente ───────────────────────────
+    // ── Distribución por agente (última revisión de cada sesión) ──
     const agentRows = await q(`
-      SELECT a.name, a.color, r.quality, COUNT(*) n
-      FROM reviews r
-      JOIN agents a ON a.id=r.agent_id
-      JOIN sessions s ON s.id=r.session_id
+      SELECT a.name, a.color, lr.quality, COUNT(*) n
+      FROM (
+        SELECT DISTINCT ON (r.session_id) r.session_id, r.quality, r.agent_id, r.created_at
+        FROM reviews r
+        ORDER BY r.session_id, r.created_at DESC
+      ) lr
+      JOIN agents a ON a.id=lr.agent_id
+      JOIN sessions s ON s.id=lr.session_id
       WHERE a.role='agent' ${rw.where}
-      GROUP BY a.name, a.color, r.quality
+      GROUP BY a.name, a.color, lr.quality
     `, rw.params);
 
     // ── Revisiones por día ────────────────────────────────
