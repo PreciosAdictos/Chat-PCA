@@ -1542,26 +1542,8 @@ function renderAnalytics(d) {
   renderNoReplyAndRates(d);
 }
 
-// ── Sin respuesta y tasas ─────────────────────────────────
+// ── Tasas de respuesta ────────────────────────────────────
 function renderNoReplyAndRates(d) {
-  const noReply = d.noReply || [];
-  document.getElementById('nr-count').textContent = noReply.length
-    ? noReply.length + ' contacto' + (noReply.length !== 1 ? 's' : '')
-    : '';
-  document.getElementById('nr-tbody').innerHTML = noReply.length
-    ? noReply.map(r => {
-        const days = r.daysWaiting || 0;
-        const chipCls = days >= 7 ? 'dc-7' : days >= 5 ? 'dc-5' : 'dc-3';
-        return `<tr>
-          <td class="nm">${esc(r.name||r.phone)}</td>
-          <td class="mn" style="color:${r.agentColor||'var(--t2)'}"> ${esc(r.agentName||'—')}</td>
-          <td style="color:var(--t3);font-size:11px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">"${esc((r.lastBody||'').slice(0,60))}"</td>
-          <td><span class="days-chip ${chipCls}">${days}d</span></td>
-          <td><button style="font-size:10px;padding:3px 9px;border-radius:5px;border:1px solid var(--b);background:transparent;color:var(--G);cursor:pointer" onclick="openConvById(${r.sessionId})">Ver →</button></td>
-        </tr>`;
-      }).join('')
-    : '<tr><td colspan="5" style="color:var(--t3);padding:14px 10px">Sin contactos pendientes · todo al día 👍</td></tr>';
-
   const G='#00e5a0', R='#ff5757';
   const rr = d.responseRate || {};
   function renderRRCard(canvasId, repId, nrpId, pctId, titleId, replied, notReplied, from, to) {
@@ -1581,31 +1563,6 @@ function renderNoReplyAndRates(d) {
   }
   if (rr.week)  renderRRCard('rr-week-chart',  'rr-w-rep','rr-w-nrp','rr-w-pct', 'rr-w-title', rr.week.replied,  rr.week.notReplied,  rr.week.from,  rr.week.to);
   if (rr.month) renderRRCard('rr-month-chart', 'rr-m-rep','rr-m-nrp','rr-m-pct', 'rr-m-title', rr.month.replied, rr.month.notReplied, rr.month.from, rr.month.to);
-
-  const GR = 'rgba(255,255,255,.05)';
-  const weekly = d.weeklyRate || [];
-  mkChart('ch-weekly',{type:'bar',data:{
-    labels:weekly.map(r=>r.week?.slice(-3)||r.week),
-    datasets:[
-      {label:'Respondidos',   data:weekly.map(r=>r.replied),    backgroundColor:G,                       borderRadius:3,borderWidth:0},
-      {label:'Sin respuesta', data:weekly.map(r=>r.notReplied), backgroundColor:'rgba(255,87,87,.5)',    borderRadius:3,borderWidth:0},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},
-      plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
-  });
-
-  const monthly = d.monthlyRate || [];
-  mkChart('ch-monthly',{type:'bar',data:{
-    labels:monthly.map(r=>r.month),
-    datasets:[
-      {label:'Respondidos',   data:monthly.map(r=>r.replied),    backgroundColor:G,                    borderRadius:3,borderWidth:0},
-      {label:'Sin respuesta', data:monthly.map(r=>r.notReplied), backgroundColor:'rgba(255,87,87,.5)',borderRadius:3,borderWidth:0},
-    ]},
-    options:{responsive:true,maintainAspectRatio:false,
-      scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:10}}},y:{stacked:true,grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},
-      plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
-  });
 }
 
 // ── Abrir conversación desde analítica ────────────────────
