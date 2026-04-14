@@ -163,7 +163,7 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .tabs{display:flex;gap:2px;background:var(--bg4);border-radius:var(--rs);padding:3px;margin-bottom:8px}
 .tab{flex:1;font-size:11px;font-weight:500;padding:5px 4px;border-radius:6px;border:none;background:transparent;color:var(--t3);transition:all .18s var(--ease);white-space:nowrap;text-align:center}
 .tab:hover{color:var(--t2)}
-.tab.on{background:#fff;color:var(--t);box-shadow:0 2px 8px rgba(0,0,0,.25)}
+.tab.on{background:var(--grad1);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
 
 /* Filtro calidad */
 #qf-row{display:none;gap:4px;margin-bottom:8px}
@@ -419,7 +419,20 @@ textarea.ip-note::placeholder{color:var(--t3)}
 #toast{position:fixed;bottom:20px;right:20px;background:var(--grad1);border:none;color:#fff;padding:10px 16px;border-radius:var(--rs);font-size:12px;opacity:0;transform:translateY(6px);transition:all .22s var(--ease);pointer-events:none;z-index:400;max-width:320px;box-shadow:0 8px 24px rgba(99,102,241,.2)}
 #toast.show{opacity:1;transform:translateY(0)}
 
-/* ── Filtro de fechas ─────────────────── */
+/* ── Selección múltiple ── */
+.sel-bar{display:none;align-items:center;justify-content:space-between;padding:7px 14px;background:rgba(129,140,248,.12);border-bottom:1px solid rgba(129,140,248,.2);gap:8px;flex-shrink:0}
+.sel-bar.vis{display:flex}
+.sel-count{font-size:11px;font-weight:600;color:var(--Bl)}
+.sel-close-btn{font-size:11px;font-weight:700;padding:5px 12px;border-radius:7px;border:none;background:var(--grad1);color:#fff;cursor:pointer;transition:opacity .18s}
+.sel-close-btn:hover{opacity:.85}
+.sel-close-btn:disabled{opacity:.4;cursor:not-allowed}
+.sel-cancel-btn{font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--t3);cursor:pointer;transition:all .18s}
+.sel-cancel-btn:hover{color:var(--t2);border-color:var(--b3)}
+.ci-cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--b3);background:var(--bg3);cursor:pointer;flex-shrink:0;display:none;accent-color:var(--Bl)}
+.sel-mode .ci-cb{display:block}
+.sel-mode .ci{cursor:pointer}
+.ci.selected{background:rgba(129,140,248,.08);border-left:3px solid var(--Bl)}
+.sel-all-btn{font-size:10px;color:var(--Bl);background:transparent;border:none;cursor:pointer;padding:0;font-family:var(--f);text-decoration:underline}
 .date-filter{display:flex;gap:5px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
 .date-filter input[type=date]{flex:1;padding:5px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);outline:none;min-width:0;font-family:var(--mono);transition:border .18s}
 .date-filter input[type=date]:focus{border-color:var(--Bl)}
@@ -568,6 +581,18 @@ textarea.ip-note::placeholder{color:var(--t3)}
           <span class="df-sep">→</span>
           <input type="date" id="df-to" onchange="applyDateFilter()" title="Hasta">
           <button class="df-clear" onclick="clearDateFilter()" title="Quitar filtro">✕</button>
+        </div>
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 2px">
+          <button class="sel-cancel-btn" id="sel-toggle-btn" onclick="toggleSelMode()" style="font-size:10px;padding:4px 9px">Seleccionar</button>
+          <button class="sel-all-btn" id="sel-all-btn" onclick="selectAll()" style="display:none">Seleccionar todo</button>
+        </div>
+      </div>
+      <!-- Barra de cierre masivo -->
+      <div class="sel-bar" id="sel-bar">
+        <span class="sel-count" id="sel-count">0 seleccionadas</span>
+        <div style="display:flex;gap:6px">
+          <button class="sel-cancel-btn" onclick="toggleSelMode()">Cancelar</button>
+          <button class="sel-close-btn" id="sel-close-btn" onclick="closeSelected()" disabled>Cerrar seleccionadas</button>
         </div>
       </div>
       <div id="conv-list"></div>
@@ -1119,8 +1144,9 @@ function renderList() {
       ? `<div class="rev-dots">${allRevDots.slice(-10).map(q=>`<span class="rd ${q||'act'}" title="${q||'activa'}"></span>`).join('')}<span class="rd-lbl">${totalRevs} rev. total</span></div>`
       : '';
 
-    return `<div class="ci ${c.sessionId===activeId?'on':''}" data-id="${c.sessionId}" onclick="openConv(${c.sessionId})">
+    return `<div class="ci ${c.sessionId===activeId?'on':''} ${selectedIds.has(c.sessionId)?'selected':''}" data-id="${c.sessionId}" onclick="handleCiClick(event,${c.sessionId})">
       <div class="ci-r1">
+        ${c.status==='active'?`<input type="checkbox" class="ci-cb" ${selectedIds.has(c.sessionId)?'checked':''} onclick="event.stopPropagation();toggleSelect(${c.sessionId},this)">`:''} 
         <span class="ci-name">
           <span class="ci-nametxt">${esc(c.name)}</span>
           ${ftag(c.flow)}
@@ -1400,6 +1426,101 @@ async function confirmReview() {
       if (activeId===id) { renderMsgs(sessions[id]); renderInfo(sessions[id]); }
     }
   } catch { /* Sin backend — la actualización local ya está hecha */ }
+}
+
+// ═══════════════════════════════════════════
+// SELECCIÓN MÚLTIPLE
+// ═══════════════════════════════════════════
+let selMode = false;
+const selectedIds = new Set();
+
+function toggleSelMode() {
+  selMode = !selMode;
+  selectedIds.clear();
+  const sb = document.getElementById('sel-bar');
+  const btn = document.getElementById('sel-toggle-btn');
+  const allBtn = document.getElementById('sel-all-btn');
+  const list = document.getElementById('conv-list');
+  if (selMode) {
+    sb.classList.add('vis');
+    btn.textContent = 'Cancelar';
+    allBtn.style.display = 'inline';
+    list.classList.add('sel-mode');
+  } else {
+    sb.classList.remove('vis');
+    btn.textContent = 'Seleccionar';
+    allBtn.style.display = 'none';
+    list.classList.remove('sel-mode');
+  }
+  updateSelBar();
+  renderList();
+}
+
+function handleCiClick(e, id) {
+  if (selMode) {
+    const c = sessions[id];
+    if (!c || c.status !== 'active') return;
+    toggleSelect(id, null);
+  } else {
+    openConv(id);
+  }
+}
+
+function toggleSelect(id, cb) {
+  if (selectedIds.has(id)) selectedIds.delete(id);
+  else selectedIds.add(id);
+  updateSelBar();
+  // Actualizar clase sin re-renderizar toda la lista
+  const el = document.querySelector(`.ci[data-id="${id}"]`);
+  if (el) {
+    el.classList.toggle('selected', selectedIds.has(id));
+    const checkbox = el.querySelector('.ci-cb');
+    if (checkbox) checkbox.checked = selectedIds.has(id);
+  }
+}
+
+function selectAll() {
+  const active = Object.values(sessions).filter(c => c.status === 'active');
+  active.forEach(c => selectedIds.add(c.sessionId));
+  updateSelBar();
+  renderList();
+}
+
+function updateSelBar() {
+  const count = selectedIds.size;
+  document.getElementById('sel-count').textContent = `${count} conversación${count !== 1 ? 'es' : ''} seleccionada${count !== 1 ? 's' : ''}`;
+  document.getElementById('sel-close-btn').disabled = count === 0;
+}
+
+async function closeSelected() {
+  if (selectedIds.size === 0) return;
+  const ids = [...selectedIds];
+  const btn = document.getElementById('sel-close-btn');
+  btn.disabled = true;
+  btn.textContent = `Cerrando ${ids.length}...`;
+
+  let closed = 0;
+  for (const id of ids) {
+    try {
+      const r = await authFetch(`/api/sessions/${id}/close`, { method: 'POST' });
+      const updated = await r.json();
+      if (updated.sessionId) sessions[id] = updated;
+      else if (sessions[id]) sessions[id].status = 'closed';
+      closed++;
+    } catch {
+      if (sessions[id]) sessions[id].status = 'closed';
+    }
+  }
+
+  selectedIds.clear();
+  toggleSelMode();
+  renderList(); updatePip();
+  toast(`✅ ${closed} conversación${closed !== 1 ? 'es' : ''} cerrada${closed !== 1 ? 's' : ''}`);
+  if (activeId && sessions[activeId]) {
+    renderMsgs(sessions[activeId]);
+    renderInfo(sessions[activeId]);
+    document.getElementById('btn-close').style.display = sessions[activeId].status === 'active' ? 'flex' : 'none';
+  }
 }
 
 async function closeSession() {
