@@ -220,14 +220,16 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 .hb.close-btn{color:var(--t3)}.hb.close-btn:hover{color:var(--R);border-color:rgba(255,87,87,.3);background:var(--Rbg)}
 
 /* Mensajes */
-#msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:8px;background:var(--bg)}
-.msg{max-width:70%}
+#msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
+.msg{max-width:72%}
 .msg.in{align-self:flex-start}.msg.out{align-self:flex-end}.msg.bot{align-self:flex-start}
-.bbl{padding:10px 14px;border-radius:14px;font-size:13px;line-height:1.65}
-.msg.in  .bbl{background:var(--bg2);border:1px solid var(--b);color:var(--t);border-bottom-left-radius:4px}
-.msg.out .bbl{background:var(--G);color:#051209;font-weight:500;border-bottom-right-radius:4px}
+.bbl{padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.55;word-break:break-word;white-space:pre-wrap}
+.msg.in  .bbl{background:#1e2d24;border:1px solid rgba(0,229,160,.15);color:#e8f5e9;border-bottom-left-radius:4px}
+.msg.out .bbl{background:#005c4b;color:#e8f5e9;border-bottom-right-radius:4px}
 .msg.bot .bbl{background:var(--Blbg);border:1px solid rgba(91,138,247,.2);color:var(--t2);font-size:11px;border-bottom-left-radius:4px;font-family:var(--mono)}
-.msg-t{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
+.bbl a{color:#4fc3a1;text-decoration:underline;word-break:break-all}
+.bbl a:hover{color:#00e5a0}
+.msg-t{font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--mono)}
 .msg.out .msg-t{text-align:right}
 /* Mensaje de sistema con calidad coloreada */
 .sys-n{align-self:center;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--t3);background:var(--bg3);border:1px solid var(--b);padding:5px 14px;border-radius:20px;font-family:var(--mono);max-width:85%}
@@ -1156,6 +1158,25 @@ function openConv(id) {
   c.unread=false; updatePip();
 }
 
+function formatMsg(text) {
+  if (!text) return '';
+  // 1. Escapar HTML
+  let t = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+  // 2. URLs clicables
+  t = t.replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
+  // 3. WhatsApp bold: *texto*
+  t = t.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
+  // 4. WhatsApp italic: _texto_
+  t = t.replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '<em>$1</em>');
+  // 5. WhatsApp strikethrough: ~texto~
+  t = t.replace(/~([^~\n]+)~/g, '<del>$1</del>');
+  // 6. WhatsApp monospace: ```texto```
+  t = t.replace(/```([^`]+)```/g, '<code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.2);padding:2px 5px;border-radius:4px">$1</code>');
+  // 7. Saltos de línea
+  t = t.replace(/\n/g, '<br>');
+  return t;
+}
+
 function renderMsgs(c) {
   const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
   const lq=c.lastQuality;
@@ -1193,7 +1214,7 @@ function renderMsgs(c) {
       return sep+`<div class="sys-n">${esc(txt)}${q?`<span class="sq ${q}">· ${q.toUpperCase()}</span>`:''}</div>`;
     }
     const cls=m.dir==='in'?'in':m.dir==='bot'?'bot':'out';
-    return sep+`<div class="msg ${cls}"><div class="bbl">${esc(m.text)}</div><div class="msg-t">${timeLabel}</div></div>`;
+    return sep+`<div class="msg ${cls}"><div class="bbl">${formatMsg(m.text)}</div><div class="msg-t">${timeLabel}</div></div>`;
   }).join('');
   el.scrollTop=el.scrollHeight;
 }
