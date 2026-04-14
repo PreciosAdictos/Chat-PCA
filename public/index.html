@@ -8,10 +8,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --bg:#08090d;--bg2:#0e1018;--bg3:#151825;--bg4:#1c2035;--bg5:#232845;
-  --b:rgba(255,255,255,.055);--b2:rgba(255,255,255,.1);--b3:rgba(255,255,255,.16);
-  --t:#eceef8;--t2:#7c819e;--t3:#3e4260;
-  --G:#00e5a0;--Gbg:rgba(0,229,160,.07);--Gg:rgba(0,229,160,.2);
+  --bg:#0d0f14;--bg2:#13161f;--bg3:#1a1e2e;--bg4:#222640;--bg5:#2a2f4a;
+  --b:rgba(255,255,255,.08);--b2:rgba(255,255,255,.14);--b3:rgba(255,255,255,.22);
+  --t:#f0f2ff;--t2:#9da3c0;--t3:#555a7a;
+  --G:#00e5a0;--Gbg:rgba(0,229,160,.09);--Gg:rgba(0,229,160,.25);
   --A:#f5a623;--Abg:rgba(245,166,35,.07);
   --R:#ff5757;--Rbg:rgba(255,87,87,.07);
   --Bl:#5b8af7;--Blbg:rgba(91,138,247,.07);
@@ -223,11 +223,11 @@ body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(1
 #msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
 .msg{max-width:72%}
 .msg.in{align-self:flex-start}.msg.out{align-self:flex-end}.msg.bot{align-self:flex-start}
-.bbl{padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.55;word-break:break-word;white-space:pre-wrap}
-.msg.in  .bbl{background:#1e2d24;border:1px solid rgba(0,229,160,.15);color:#e8f5e9;border-bottom-left-radius:4px}
-.msg.out .bbl{background:#005c4b;color:#e8f5e9;border-bottom-right-radius:4px}
+.bbl{padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.6;word-break:break-word}
+.msg.in  .bbl{background:#1a2820;border:1px solid rgba(0,229,160,.12);color:#d4f0e8;border-bottom-left-radius:4px}
+.msg.out .bbl{background:#004d3d;color:#e0f5ee;border-bottom-right-radius:4px}
 .msg.bot .bbl{background:var(--Blbg);border:1px solid rgba(91,138,247,.2);color:var(--t2);font-size:11px;border-bottom-left-radius:4px;font-family:var(--mono)}
-.bbl a{color:#4fc3a1;text-decoration:underline;word-break:break-all}
+.bbl a{color:#4fc3a1;text-decoration:underline;word-break:break-all;cursor:pointer;pointer-events:all}
 .bbl a:hover{color:#00e5a0}
 .msg-t{font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--mono)}
 .msg.out .msg-t{text-align:right}
@@ -1115,7 +1115,7 @@ function renderList() {
       ? `<div class="rev-dots">${allRevDots.slice(-10).map(q=>`<span class="rd ${q||'act'}" title="${q||'activa'}"></span>`).join('')}<span class="rd-lbl">${totalRevs} rev. total</span></div>`
       : '';
 
-    return `<div class="ci ${c.sessionId===activeId?'on':''}" onclick="openConv(${c.sessionId})">
+    return `<div class="ci ${c.sessionId===activeId?'on':''}" data-id="${c.sessionId}" onclick="openConv(${c.sessionId})">
       <div class="ci-r1">
         <span class="ci-name">
           <span class="ci-nametxt">${esc(c.name)}</span>
@@ -1145,9 +1145,18 @@ function updatePip() {
 // CHAT
 // ═══════════════════════════════════════════
 function openConv(id) {
-  activeId=id;
-  const c=sessions[id];
-  renderList(); renderMsgs(c); renderInfo(c);
+  // Quitar clase activa del anterior sin re-renderizar toda la lista
+  if (activeId) {
+    const prev = document.querySelector(`.ci[data-id="${activeId}"]`);
+    if (prev) prev.classList.remove('on');
+  }
+  activeId = id;
+  const c = sessions[id];
+  // Marcar el nuevo como activo
+  const curr = document.querySelector(`.ci[data-id="${id}"]`);
+  if (curr) curr.classList.add('on');
+
+  renderMsgs(c); renderInfo(c);
   document.getElementById('ch-acts').style.display='flex';
   document.getElementById('in-zone').style.display='block';
   document.getElementById('sess-chip').textContent=`sesión #${id} · ${c.waName}`;
