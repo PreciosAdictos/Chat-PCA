@@ -711,7 +711,7 @@ textarea.ip-note::placeholder{color:var(--t3)}
           <button class="tab"    onclick="setTab('active',this)">Activas</button>
           <button class="tab"    onclick="setTab('closed',this)">Cerradas</button>
         </div>
-        <div id="qf-row">
+        <div id="qf-row" style="display:flex">
           <button class="qf alta"  onclick="setQF('alta',this)">ALTA</button>
           <button class="qf media" onclick="setQF('media',this)">MEDIA</button>
           <button class="qf baja"  onclick="setQF('baja',this)">BAJA</button>
@@ -719,12 +719,6 @@ textarea.ip-note::placeholder{color:var(--t3)}
         <div class="srch">
           <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
           <input type="text" placeholder="Buscar..." oninput="setSearch(this.value)">
-        </div>
-        <div class="date-filter">
-          <input type="date" id="df-from" onchange="applyDateFilter()" title="Desde">
-          <span class="df-sep">→</span>
-          <input type="date" id="df-to" onchange="applyDateFilter()" title="Hasta">
-          <button class="df-clear" onclick="clearDateFilter()" title="Quitar filtro">✕</button>
         </div>
         <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 2px">
           <button class="sel-cancel-btn" id="sel-toggle-btn" onclick="toggleSelMode()" style="font-size:10px;padding:4px 9px">Seleccionar</button>
@@ -1708,8 +1702,8 @@ async function closeSession() {
 function setTab(t,el) {
   tabF=t;
   document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on')); el.classList.add('on');
-  const qrow=document.getElementById('qf-row');
-  if (t!=='all') { qrow.classList.add('vis'); } else { qrow.classList.remove('vis'); qF=null; document.querySelectorAll('.qf').forEach(b=>b.classList.remove('on')); }
+  // Alta/Media/Baja siempre visible — solo resetear selección al cambiar a "Todas"
+  if (t==='all') { qF=null; document.querySelectorAll('.qf').forEach(b=>b.classList.remove('on')); }
   renderList();
 }
 function setQF(q,el) {
