@@ -1,2043 +1,1314 @@
-<!DOCTYPE html>
-<html lang="es">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>WA Manager Pro</title>
-<link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-:root{
-  --bg:#0a0a0f;--bg2:#111118;--bg3:#18181f;--bg4:#1f1f28;--bg5:#26263200;
-  --b:rgba(255,255,255,.07);--b2:rgba(255,255,255,.12);--b3:rgba(255,255,255,.2);
-  --t:#f0f0ff;--t2:#9898b8;--t3:#55556a;
-  --G:#00c98a;--Gbg:rgba(0,201,138,.08);--Gg:rgba(0,201,138,.2);
-  --A:#f59e0b;--Abg:rgba(245,158,11,.08);
-  --R:#f87171;--Rbg:rgba(248,113,113,.08);
-  --Bl:#818cf8;--Blbg:rgba(129,140,248,.08);
-  --Pu:#a78bfa;--Pubg:rgba(167,139,250,.08);
-  --grad1:linear-gradient(135deg,#6366f1,#8b5cf6);
-  --grad2:linear-gradient(135deg,#00c98a,#06d6a0);
-  --grad3:linear-gradient(135deg,#f59e0b,#f97316);
-  --r:14px;--rs:9px;--rx:5px;
-  --f:'Sora',sans-serif;--mono:'JetBrains Mono',monospace;
-  --ease:cubic-bezier(.4,0,.2,1);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;overflow:hidden}
-body{font-family:var(--f);background:var(--bg);color:var(--t);font-size:13px;-webkit-font-smoothing:antialiased}
-::-webkit-scrollbar{width:3px;height:3px}
-::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:3px}
-button{cursor:pointer;font-family:var(--f)}
-input,textarea{font-family:var(--f)}
-
-/* ── BANNER TEST ── */
-#test-banner{
-  display:none;position:fixed;top:0;left:0;right:0;z-index:9999;
-  background:repeating-linear-gradient(-45deg,rgba(245,166,35,.92),rgba(245,166,35,.92) 12px,rgba(200,120,0,.85) 12px,rgba(200,120,0,.85) 24px);
-  color:#fff;font-size:11px;font-weight:700;letter-spacing:.1em;text-align:center;padding:5px 0;
-  text-transform:uppercase;text-shadow:0 1px 2px rgba(0,0,0,.4);
-  animation:bannerPulse 3s ease-in-out infinite;pointer-events:none;
-}
-#test-banner.visible{display:block}
-body.test-mode #shell,body.test-mode #login-screen{margin-top:28px;height:calc(100vh - 28px)}
-@keyframes bannerPulse{0%,100%{opacity:1}50%{opacity:.85}}
-
-/* ── Botón cerrar sesión ── */
-.nb-logout{margin-top:4px;opacity:.5;transition:opacity .18s,background .18s}
-.nb-logout:hover{opacity:1;background:rgba(255,87,87,.12) !important}
-.nb-logout svg{stroke:rgba(255,150,150,.9) !important;width:18px;height:18px}
-
-/* ══ PANEL ADMIN ══ */
-#p-admin{flex-direction:column;background:var(--bg3);overflow-y:auto;padding:24px 26px;gap:20px}
-.adm-hd h2{font-size:18px;font-weight:700;letter-spacing:-.03em}
-.adm-section{background:var(--bg2);border:1px solid var(--b2);border-radius:var(--r);padding:20px 22px;margin-bottom:18px;box-shadow:none}
-.adm-section-title{font-size:11px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:16px}
-.adm-agents-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}
-.adm-agent-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:16px}
-.adm-agent-top{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-.adm-agent-av{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
-.adm-agent-info{flex:1;min-width:0}
-.adm-agent-name{font-size:13px;font-weight:600;color:var(--t)}
-.adm-agent-user{font-size:11px;color:var(--t3);font-family:var(--mono)}
-.adm-agent-role{font-size:9px;font-weight:700;padding:2px 7px;border-radius:10px;display:inline-block;margin-top:3px;letter-spacing:.05em}
-.role-admin{background:var(--Pubg);color:var(--Pu);border:1px solid rgba(167,139,250,.25)}
-.role-agent{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.25)}
-.adm-pw-label{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
-.adm-pw-row{display:flex;gap:7px}
-.adm-pw-input{flex:1;padding:9px 12px;font-size:12px;background:#fff;border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);outline:none;transition:border .18s;min-width:0}
-.adm-pw-input:focus{border-color:var(--Bl)}
-.adm-pw-input::placeholder{color:var(--t3)}
-.adm-pw-btn{padding:9px 14px;font-size:11px;font-weight:700;background:var(--grad1);color:#fff;border:none;border-radius:var(--rs);transition:all .18s;white-space:nowrap;flex-shrink:0}
-.adm-pw-btn:hover{opacity:.9}
-.adm-pw-btn:disabled{opacity:.4;cursor:not-allowed}
-.adm-pw-msg{font-size:11px;min-height:16px;margin-top:4px}
-.adm-pw-ok{color:var(--G)}.adm-pw-err{color:var(--R)}
-
-/* ── 2FA ── */
-.tfa-qr{text-align:center;margin:16px 0}
-.tfa-qr img{width:180px;height:180px;border-radius:var(--rs);border:2px solid var(--b2)}
-.tfa-secret{font-family:var(--mono);font-size:11px;color:var(--t2);text-align:center;margin-bottom:12px;word-break:break-all;background:var(--bg3);padding:8px;border-radius:var(--rs)}
-.tfa-code-input{
-  width:100%;padding:14px;font-size:22px;font-weight:700;letter-spacing:.4em;
-  text-align:center;font-family:var(--mono);
-  background:var(--bg3);border:2px solid var(--b2);border-radius:var(--rs);
-  color:var(--t);outline:none;transition:border .18s;margin-bottom:12px;
-}
-.tfa-code-input:focus{border-color:var(--G)}
-.tfa-steps{font-size:11px;color:var(--t3);line-height:1.8;margin-bottom:16px}
-.tfa-steps b{color:var(--t2)}
-#login-screen{
-  display:flex;align-items:center;justify-content:center;
-  height:100vh;background:#f4f6fb;
-  background-image:radial-gradient(ellipse 80% 60% at 30% 20%,rgba(99,102,241,.15) 0%,transparent 60%),radial-gradient(ellipse 60% 40% at 70% 80%,rgba(139,92,246,.1) 0%,transparent 60%);
-}
-.login-box{
-  width:360px;background:var(--bg2);border:1px solid var(--b);
-  border-radius:20px;padding:36px 32px;
-  box-shadow:0 20px 60px rgba(0,0,0,.5);
-}
-.login-logo{display:flex;align-items:center;gap:10px;margin-bottom:28px}
-.login-logo-ico{width:36px;height:36px;background:var(--grad1);border-radius:10px;display:flex;align-items:center;justify-content:center}
-.login-logo-ico svg{width:20px;height:20px;fill:#fff}
-.login-logo h1{font-size:16px;font-weight:700;letter-spacing:-.02em}
-.login-logo span{font-size:11px;color:var(--t3);display:block;margin-top:1px}
-.lf-label{font-size:11px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px}
-.lf-input{
-  width:100%;padding:11px 14px;font-size:13px;
-  background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);
-  color:var(--t);outline:none;transition:border .18s;margin-bottom:12px;
-}
-.lf-input:focus{border-color:var(--Bl)}
-.lf-input::placeholder{color:var(--t3)}
-.lf-btn{
-  width:100%;padding:12px;font-size:13px;font-weight:700;
-  background:var(--grad1);color:#fff;border:none;border-radius:var(--rs);
-  transition:all .18s;margin-top:4px;
-}
-.lf-btn:hover{opacity:.9;transform:translateY(-1px)}
-.lf-err{font-size:12px;color:var(--R);margin-top:10px;text-align:center;min-height:16px}
-
-/* ── SHELL ── */
-#shell{display:flex;height:100vh;display:none}
-
-/* ── NAV ── */
-#nav{
-  width:58px;min-width:58px;background:var(--grad1);border-right:none;
-  display:flex;flex-direction:column;align-items:center;padding:12px 0;gap:3px;
-}
-.nav-logo{width:33px;height:33px;border-radius:9px;background:rgba(255,255,255,.2);display:flex;align-items:center;justify-content:center;margin-bottom:14px;flex-shrink:0}
-.nav-logo svg{width:18px;height:18px;fill:#fff}
-.nb{width:36px;height:36px;border-radius:9px;border:none;background:transparent;color:rgba(255,255,255,.55);display:flex;align-items:center;justify-content:center;transition:all .18s var(--ease);position:relative}
-.nb:hover{background:rgba(255,255,255,.15);color:rgba(255,255,255,.9)}
-.nb.on{background:rgba(255,255,255,.2);color:#fff}
-.nb.on::before{content:'';position:absolute;left:-1px;width:3px;height:18px;background:#fff;border-radius:0 3px 3px 0}
-.nb svg{width:16px;height:16px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.n-sp{flex:1}
-.agent-av{
-  width:30px;height:30px;border-radius:50%;display:flex;align-items:center;
-  justify-content:center;font-size:10px;font-weight:700;margin-bottom:6px;
-  border:2px solid rgba(255,255,255,.3);cursor:pointer;transition:border .18s;
-}
-.agent-av:hover{border-color:rgba(255,255,255,.7)}
-.pip{position:absolute;top:2px;right:2px;min-width:15px;height:15px;border-radius:8px;background:#ef4444;color:#fff;font-size:8px;font-weight:700;font-family:var(--mono);display:none;align-items:center;justify-content:center;padding:0 3px}
-.live{width:6px;height:6px;border-radius:50%;background:var(--t3);margin-top:6px;transition:background .3s}
-.live.on{background:#fff;box-shadow:0 0 8px rgba(255,255,255,.4);animation:lp 2s infinite}
-@keyframes lp{0%,100%{opacity:1}55%{opacity:.3}}
-
-/* ── PAGES ── */
-.page{display:none;flex:1;overflow:hidden;min-width:0}
-.page.on{display:flex}
-
-/* ═══════════════════════════════════
-   CONVERSACIONES
-═══════════════════════════════════ */
-#p-c{flex-direction:row}
-
-#sb{width:305px;min-width:305px;background:var(--bg2);border-right:1px solid var(--b);display:flex;flex-direction:column}
-#sb-top{padding:16px 14px 8px}
-#sb-top h2{font-size:13px;font-weight:600;letter-spacing:-.01em;margin-bottom:12px;display:flex;align-items:center;gap:7px}
-.wa-chip{font-size:10px;font-weight:600;padding:2px 7px;border-radius:12px;border:1px solid;opacity:.9}
-
-/* Tabs */
-.tabs{display:flex;gap:2px;background:var(--bg4);border-radius:var(--rs);padding:3px;margin-bottom:8px}
-.tab{flex:1;font-size:11px;font-weight:500;padding:5px 4px;border-radius:6px;border:none;background:transparent;color:var(--t3);transition:all .18s var(--ease);white-space:nowrap;text-align:center}
-.tab:hover{color:var(--t2)}
-.tab.on{background:var(--grad1);color:#fff;box-shadow:0 2px 8px rgba(99,102,241,.3)}
-
-/* Filtro calidad */
-#qf-row{display:none;gap:4px;margin-bottom:8px}
-#qf-row.vis{display:flex}
-.qf{flex:1;font-size:10px;font-weight:700;letter-spacing:.04em;padding:4px 0;border-radius:var(--rx);border:1px solid transparent;transition:all .18s;text-align:center}
-.qf.alta{color:var(--G);border-color:rgba(0,229,160,.2)}.qf.alta:hover,.qf.alta.on{background:var(--Gbg);border-color:var(--G)}
-.qf.media{color:var(--A);border-color:rgba(245,166,35,.2)}.qf.media:hover,.qf.media.on{background:var(--Abg);border-color:var(--A)}
-.qf.baja{color:var(--R);border-color:rgba(255,87,87,.2)}.qf.baja:hover,.qf.baja.on{background:var(--Rbg);border-color:var(--R)}
-
-/* Búsqueda */
-.srch{position:relative;margin-bottom:6px}
-.srch input{width:100%;padding:8px 12px 8px 32px;font-size:12px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);outline:none;transition:border .18s}
-.srch input::placeholder{color:var(--t3)}
-.srch input:focus{border-color:var(--Bl)}
-.si{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--t3);pointer-events:none;width:13px;height:13px}
-
-/* Tarjetas conversación */
-#conv-list{flex:1;overflow-y:auto}
-.ci{padding:11px 14px;border-bottom:1px solid var(--b);transition:background .12s;position:relative}
-.ci:hover{background:rgba(129,140,248,.06)}
-.ci.on{background:rgba(129,140,248,.08);border-left:3px solid var(--Bl)}
-.ci-r1{display:flex;justify-content:space-between;align-items:flex-start;gap:5px;margin-bottom:2px}
-.ci-name{font-size:12px;font-weight:600;color:var(--t);display:flex;align-items:center;gap:4px;min-width:0;flex:1}
-.ci-nametxt{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ci-right{display:flex;align-items:center;gap:3px;flex-shrink:0}
-.ci-time{font-size:10px;color:var(--t2);font-family:var(--mono)}
-.ci-prev{font-size:11px;color:var(--t2);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;margin-bottom:4px}
-.qdot{width:7px;height:7px;border-radius:50%;flex-shrink:0;display:inline-block}
-.qdot.alta{background:var(--G);box-shadow:0 0 5px var(--Gg)}.qdot.media{background:var(--A)}.qdot.baja{background:var(--R)}.qdot.none{background:var(--t3)}
-.unring{width:7px;height:7px;border-radius:50%;background:var(--G);flex-shrink:0}
-.ft{font-size:9px;font-weight:700;padding:2px 5px;border-radius:3px;letter-spacing:.04em;flex-shrink:0}
-.ft-c{background:var(--Blbg);color:var(--Bl)}.ft-r{background:var(--Abg);color:var(--A)}.ft-m{background:var(--Pubg);color:var(--Pu)}
-.qbadge{font-size:9px;font-weight:700;letter-spacing:.06em;padding:2px 6px;border-radius:4px;flex-shrink:0}
-.qb-alta{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.22)}
-.qb-media{background:var(--Abg);color:var(--A);border:1px solid rgba(245,166,35,.22)}
-.qb-baja{background:var(--Rbg);color:var(--R);border:1px solid rgba(255,87,87,.22)}
-/* Revisiones mini en tarjeta */
-.rev-dots{display:flex;gap:3px;align-items:center;margin-top:3px}
-.rd{width:9px;height:9px;border-radius:3px;flex-shrink:0}
-.rd.alta{background:var(--G);opacity:.8}.rd.media{background:var(--A);opacity:.8}.rd.baja{background:var(--R);opacity:.8}.rd.act{background:var(--t3);opacity:.4}
-.rd-lbl{font-size:9px;color:var(--t3);margin-left:2px;font-family:var(--mono)}
-
-/* ── CHAT ── */
-#chat{flex:1;display:flex;flex-direction:column;min-width:0}
-#ch-head{padding:11px 16px;background:var(--bg2);border-bottom:1px solid var(--b);display:flex;align-items:center;justify-content:space-between;flex-shrink:0;gap:10px}
-.ch-l{display:flex;align-items:center;gap:10px;min-width:0}
-.av{width:35px;height:35px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700}
-.av0{background:rgba(0,229,160,.12);color:var(--G)}.av1{background:rgba(91,138,247,.12);color:var(--Bl)}
-.av2{background:rgba(245,166,35,.12);color:var(--A)}.av3{background:rgba(167,139,250,.12);color:var(--Pu)}
-.ch-info h3{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.ch-info p{font-size:11px;color:var(--t3);display:flex;align-items:center;gap:5px;margin-top:1px;flex-wrap:wrap}
-.ch-acts{display:flex;align-items:center;gap:5px;flex-shrink:0}
-.schip{font-size:10px;padding:3px 8px;border-radius:5px;border:1.5px solid var(--b2);background:var(--bg3);color:var(--t2);font-family:var(--mono)}
-.hb{height:30px;padding:0 10px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--t2);display:flex;align-items:center;gap:5px;font-size:11px;font-weight:500;transition:all .18s var(--ease);white-space:nowrap}
-.hb svg{width:12px;height:12px;flex-shrink:0;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
-.hb:hover{background:var(--bg3);color:var(--t2);border-color:var(--b2)}
-.hb.rev{color:#6366f1;border-color:rgba(99,102,241,.3)}.hb.rev:hover{background:rgba(99,102,241,.06);border-color:var(--Bl)}
-.hb.close-btn{color:var(--t3)}.hb.close-btn:hover{color:var(--R);border-color:rgba(255,87,87,.3);background:var(--Rbg)}
-
-/* Mensajes */
-#msgs{flex:1;overflow-y:auto;padding:18px;display:flex;flex-direction:column;gap:6px;background:var(--bg)}
-.msg{max-width:72%}
-.msg.in{align-self:flex-start}.msg.out{align-self:flex-end}.msg.bot{align-self:flex-start}
-.bbl{padding:9px 13px;border-radius:16px;font-size:13.5px;line-height:1.6;word-break:break-word}
-.msg.in  .bbl{background:rgba(0,201,138,.08);border:1px solid rgba(0,201,138,.15);color:var(--t);border-bottom-left-radius:4px}
-.msg.out .bbl{background:var(--grad1);color:#fff;border-bottom-right-radius:4px}
-.msg.bot .bbl{background:var(--Blbg);border:1px solid rgba(91,138,247,.2);color:var(--t2);font-size:11px;border-bottom-left-radius:4px;font-family:var(--mono)}
-.bbl a{color:#6366f1;text-decoration:underline;word-break:break-all;cursor:pointer;pointer-events:all}
-.bbl a:hover{color:#4f46e5}
-.msg-t{font-size:10px;color:var(--t3);margin-top:3px;font-family:var(--mono)}
-.msg.out .msg-t{text-align:right}
-/* Mensaje de sistema con calidad coloreada */
-.sys-n{align-self:center;display:flex;align-items:center;gap:6px;font-size:10px;color:var(--t2);background:var(--bg3);border:1px solid var(--b);padding:5px 14px;border-radius:20px;font-family:var(--mono);max-width:85%}
-.sq{font-weight:700;font-size:10px}.sq.alta{color:var(--G)}.sq.media{color:var(--A)}.sq.baja{color:var(--R)}
-.empty-c{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--t3);gap:10px}
-.empty-c .ico{font-size:32px;opacity:.18}
-
-/* Input */
-#in-zone{padding:12px 14px;background:var(--bg2);border-top:1px solid var(--b);flex-shrink:0}
-.tpls{display:flex;gap:5px;margin-bottom:9px;overflow-x:auto;padding-bottom:2px}
-.tpls::-webkit-scrollbar{height:0}
-.tc{font-size:11px;padding:4px 10px;border-radius:16px;border:1px solid var(--b);background:transparent;color:var(--t3);white-space:nowrap;transition:all .18s}
-.tc:hover{background:#f0f2ff;color:var(--Bl);border-color:rgba(99,102,241,.3)}
-.in-row{display:flex;gap:9px;align-items:flex-end}
-#msg-in{flex:1;padding:10px 15px;font-size:13px;background:var(--bg3);border:1px solid var(--b2);border-radius:20px;color:var(--t);outline:none;resize:none;max-height:90px;transition:border .18s;line-height:1.55}
-#msg-in::placeholder{color:var(--t3)}
-#msg-in:focus{border-color:var(--Bl)}
-#send-b{padding:10px 18px;background:var(--grad1);color:#fff;border:none;border-radius:20px;font-size:12px;font-weight:700;transition:all .18s;white-space:nowrap}
-#send-b:hover{opacity:.9;transform:scale(1.03)}
-#send-b:disabled{opacity:.4;cursor:not-allowed;transform:none}
-
-/* ── INFO PANEL ── */
-#ip{width:240px;min-width:240px;background:var(--bg2);border-left:1px solid var(--b);padding:16px 13px;display:flex;flex-direction:column;gap:18px;overflow-y:auto}
-.iph{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.1em;margin-bottom:8px}
-.ip-row{display:flex;justify-content:space-between;gap:8px;margin-bottom:5px}
-.ip-l{font-size:11px;color:var(--t3)}.ip-v{font-size:11px;color:var(--t);font-weight:500;text-align:right;word-break:break-word;max-width:130px}
-.stbadge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:5px}
-.st-a{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.22)}
-.st-c{background:var(--bg4);color:var(--t3);border:1px solid var(--b2)}
-
-/* Timeline de revisiones */
-.rev-timeline{display:flex;flex-direction:column;gap:8px}
-.rev-item{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:10px 11px;border-left:3px solid;position:relative}
-.rev-item.alta{border-left-color:var(--G);background:rgba(0,229,160,.04)}
-.rev-item.media{border-left-color:var(--A);background:rgba(245,166,35,.04)}
-.rev-item.baja{border-left-color:var(--R);background:rgba(255,87,87,.04)}
-.ri-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:5px;gap:6px}
-/* Etiqueta grande y clara de calidad */
-.ri-qual{
-  font-size:11px;font-weight:700;letter-spacing:.07em;
-  padding:3px 10px;border-radius:5px;
-  display:inline-flex;align-items:center;gap:5px;
-}
-.ri-qual::before{content:'';width:6px;height:6px;border-radius:50%;flex-shrink:0}
-.rq-alta{background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.3)}
-.rq-alta::before{background:var(--G);box-shadow:0 0 5px var(--Gg)}
-.rq-media{background:var(--Abg);color:var(--A);border:1px solid rgba(245,166,35,.3)}
-.rq-media::before{background:var(--A)}
-.rq-baja{background:var(--Rbg);color:var(--R);border:1px solid rgba(255,87,87,.3)}
-.rq-baja::before{background:var(--R)}
-.ri-date{font-size:10px;color:var(--t3);font-family:var(--mono)}
-.ri-agent{font-size:11px;color:var(--t2);margin-bottom:3px;font-weight:500}
-.ri-note{font-size:11px;color:var(--t3);font-style:italic;line-height:1.5}
-/* Badge "última" en la revisión más reciente */
-.ri-latest{
-  position:absolute;top:8px;right:8px;
-  font-size:9px;font-weight:700;letter-spacing:.05em;
-  padding:1px 6px;border-radius:10px;
-  background:var(--bg5);color:var(--t3);border:1px solid var(--b2);
-}
-
-/* Etiqueta calidad actual visible en tarjeta conversación */
-.ci-qual-current{
-  display:inline-flex;align-items:center;gap:3px;
-  font-size:9px;font-weight:700;letter-spacing:.06em;
-  padding:2px 7px;border-radius:4px;flex-shrink:0;
-  margin-top:3px;
-}
-.cqc-alta {background:var(--Gbg);color:var(--G);border:1px solid rgba(0,229,160,.22)}
-.cqc-media{background:var(--Abg);color:var(--A);border:1px solid rgba(245,166,35,.22)}
-.cqc-baja {background:var(--Rbg);color:var(--R);border:1px solid rgba(255,87,87,.22)}
-
-/* Historial sesiones */
-.hi{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:9px 10px;margin-bottom:6px}
-.hi-top{display:flex;justify-content:space-between;align-items:center;margin-bottom:2px}
-.hi-lq{font-size:9px;font-weight:700;padding:2px 6px;border-radius:4px;letter-spacing:.05em}
-.hlq-alta{background:var(--Gbg);color:var(--G)}.hlq-media{background:var(--Abg);color:var(--A)}.hlq-baja{background:var(--Rbg);color:var(--R)}.hlq-act{background:var(--bg5);color:var(--t3)}
-.hi-date{font-size:10px;color:var(--t3);font-family:var(--mono)}
-.hi-prev{font-size:11px;color:var(--t3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hi-meta{font-size:10px;color:var(--t3);margin-top:2px;font-family:var(--mono)}
-
-/* Evolución calidad */
-.evo-bar{display:flex;gap:2px;align-items:flex-end;height:28px;margin-top:6px}
-.evo-seg{border-radius:3px 3px 0 0;min-width:12px;transition:height .3s var(--ease);cursor:default}
-
-textarea.ip-note{width:100%;padding:8px;font-size:11px;line-height:1.6;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);resize:none;min-height:68px;outline:none;transition:border .18s}
-textarea.ip-note:focus{border-color:var(--G)}
-textarea.ip-note::placeholder{color:var(--t3)}
-.ip-save{margin-top:5px;width:100%;padding:7px;font-size:11px;font-weight:500;background:transparent;border:1px solid var(--b);border-radius:var(--rs);color:var(--t3);transition:all .18s}
-.ip-save:hover{background:var(--Gbg);color:var(--G);border-color:var(--G)}
-
-/* ═══════════════════════════════════
-   MODAL REVISIÓN
-═══════════════════════════════════ */
-#ov{position:fixed;inset:0;background:rgba(0,0,0,.78);backdrop-filter:blur(6px);display:flex;align-items:center;justify-content:center;z-index:300;opacity:0;pointer-events:none;transition:opacity .2s var(--ease)}
-#ov.show{opacity:1;pointer-events:all}
-#modal{background:var(--bg2);border:1px solid var(--b2);border-radius:20px;padding:28px 26px;width:420px;transform:scale(.95) translateY(8px);transition:transform .22s var(--ease);box-shadow:0 24px 64px rgba(0,0,0,.5)}
-#ov.show #modal{transform:scale(1) translateY(0)}
-.m-ttl{font-size:16px;font-weight:700;letter-spacing:-.02em;margin-bottom:5px}
-.m-sub{font-size:12px;color:var(--t3);line-height:1.6;margin-bottom:20px}
-.qcards{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-.qcard{padding:16px 10px 14px;border-radius:var(--rs);border:2px solid var(--b);background:var(--bg3);text-align:center;transition:all .2s var(--ease)}
-.qcard:hover{transform:translateY(-2px)}
-.qcard.sel{transform:translateY(-3px)}
-.qc-A.sel{border-color:var(--G);background:var(--Gbg)}
-.qc-M.sel{border-color:var(--A);background:var(--Abg)}
-.qc-B.sel{border-color:var(--R);background:var(--Rbg)}
-.qc-ico{font-size:22px;margin-bottom:8px}
-.qc-lbl{font-size:11px;font-weight:700;letter-spacing:.06em}
-.qc-A .qc-lbl{color:var(--G)}.qc-M .qc-lbl{color:var(--A)}.qc-B .qc-lbl{color:var(--R)}
-.qc-desc{font-size:10px;color:var(--t3);margin-top:4px;line-height:1.4}
-/* Revisiones previas en modal */
-.prev-revs{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:10px 12px;margin-bottom:14px}
-.pr-ttl{font-size:10px;font-weight:600;color:var(--t3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:8px}
-.pr-item{display:flex;align-items:center;gap:8px;margin-bottom:5px;font-size:11px}
-.pr-item:last-child{margin-bottom:0}
-.pr-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.pr-dot.alta{background:var(--G)}.pr-dot.media{background:var(--A)}.pr-dot.baja{background:var(--R)}
-.pr-txt{color:var(--t2);flex:1}
-.pr-date{color:var(--t3);font-family:var(--mono);font-size:10px}
-.m-note{width:100%;padding:9px;font-size:12px;line-height:1.6;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);resize:none;min-height:56px;outline:none;margin-bottom:14px;transition:border .18s}
-.m-note:focus{border-color:var(--Bl)}
-.m-note::placeholder{color:var(--t3)}
-.m-acts{display:flex;gap:10px}
-.m-cancel{flex:1;padding:11px;font-size:12px;font-weight:500;background:transparent;border:1px solid var(--b);border-radius:var(--rs);color:var(--t2);transition:all .18s}
-.m-cancel:hover{background:#f4f6fb}
-.m-ok{flex:2;padding:11px;font-size:13px;font-weight:700;background:var(--grad1);color:#fff;border:none;border-radius:var(--rs);transition:all .18s}
-.m-ok:hover{opacity:.9}
-.m-ok:disabled{opacity:.35;cursor:not-allowed}
-
-/* ═══════════════════════════════════
-   ANALÍTICA
-═══════════════════════════════════ */
-#p-a{flex-direction:column;background:var(--bg);overflow-y:auto;padding:24px 26px;gap:20px}
-.a-hd{display:flex;align-items:flex-end;justify-content:space-between;flex-wrap:wrap;gap:10px}
-.a-hd h2{font-size:18px;font-weight:700;letter-spacing:-.03em}
-.a-hd .sub{font-size:12px;color:var(--t3);margin-top:2px}
-/* Selector agente (solo admin) */
-.a-controls{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-.agsel{padding:6px 12px;font-size:12px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);outline:none;cursor:pointer;font-family:var(--f)}
-.af{display:flex;gap:5px;flex-wrap:wrap}
-.afb{font-size:11px;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--b);background:transparent;color:var(--t3);transition:all .18s;font-family:var(--f)}
-.afb:hover{background:var(--bg3);color:var(--t2)}
-.afb.on{background:var(--bg3);color:var(--t);border-color:var(--b2)}
-.afb.alta.on{background:var(--Gbg);color:var(--G);border-color:var(--G)}
-.afb.media.on{background:var(--Abg);color:var(--A);border-color:var(--A)}
-.afb.baja.on{background:var(--Rbg);color:var(--R);border-color:var(--R)}
-
-/* KPIs */
-.kg{display:grid;grid-template-columns:repeat(auto-fit,minmax(138px,1fr));gap:11px}
-.kpi{background:#fff;border:1.5px solid var(--b);border-radius:var(--r);padding:15px 15px 13px;transition:all .2s;box-shadow:0 2px 8px rgba(0,0,0,.3)}
-.kpi:hover{border-color:rgba(99,102,241,.3);box-shadow:0 4px 16px rgba(0,0,0,.2);transform:translateY(-1px)}
-.kpi-l{font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.09em;margin-bottom:8px}
-.kpi-v{font-size:30px;font-weight:300;color:var(--t);letter-spacing:-.04em;line-height:1}
-.kpi-v.g{color:var(--G)}.kpi-v.a{color:var(--A)}.kpi-v.r{color:var(--R)}
-.kpi-s{font-size:10px;color:var(--t3);margin-top:4px;font-family:var(--mono)}
-
-.cg{display:grid;grid-template-columns:1fr 1fr;gap:13px}
-.cc{background:var(--bg2);border:1px solid var(--b2);border-radius:var(--r);padding:17px 17px 15px;box-shadow:0 2px 12px rgba(0,0,0,.2)}
-.cc.wide{grid-column:1/-1}
-.cct{font-size:12px;font-weight:600;margin-bottom:13px;letter-spacing:-.01em;display:flex;align-items:center;gap:6px}
-.cct span{font-size:10px;font-weight:400;color:var(--t3)}
-.cw{position:relative;height:190px}
-.cw.tall{height:240px}
-
-/* Tabla agentes */
-.at{width:100%;border-collapse:collapse}
-.at th{font-size:9px;font-weight:700;color:var(--t2);text-transform:uppercase;letter-spacing:.08em;padding:0 0 8px;text-align:left;border-bottom:1px solid var(--b)}
-.at td{padding:8px 0;border-bottom:1px solid var(--b);font-size:12px;color:var(--t)}
-.at tr:last-child td{border-bottom:none}
-.at .mn{font-family:var(--mono);font-size:11px;color:var(--t2)}
-.mbar{display:inline-block;height:7px;border-radius:3px;min-width:2px}
-
-/* Tabla historial */
-.tw{overflow-x:auto}
-.tt{width:100%;border-collapse:collapse;font-size:11px}
-.tt th{text-align:left;padding:7px 10px;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--b);background:var(--bg3)}
-.tt td{padding:8px 10px;border-bottom:1px solid var(--b);color:var(--t2)}
-.tt tr:hover td{background:rgba(255,255,255,.015)}
-.tt td.nm{color:var(--t);font-weight:500}.tt td.mn{font-family:var(--mono);font-size:10px}
-
-/* Toast */
-#toast{position:fixed;bottom:20px;right:20px;background:var(--grad1);border:none;color:#fff;padding:10px 16px;border-radius:var(--rs);font-size:12px;opacity:0;transform:translateY(6px);transition:all .22s var(--ease);pointer-events:none;z-index:400;max-width:320px;box-shadow:0 8px 24px rgba(99,102,241,.2)}
-#toast.show{opacity:1;transform:translateY(0)}
-
-/* ── Selección múltiple ── */
-.sel-bar{display:none;align-items:center;justify-content:space-between;padding:7px 14px;background:rgba(129,140,248,.12);border-bottom:1px solid rgba(129,140,248,.2);gap:8px;flex-shrink:0}
-.sel-bar.vis{display:flex}
-.sel-count{font-size:11px;font-weight:600;color:var(--Bl)}
-.sel-close-btn{font-size:11px;font-weight:700;padding:5px 12px;border-radius:7px;border:none;background:var(--grad1);color:#fff;cursor:pointer;transition:opacity .18s}
-.sel-close-btn:hover{opacity:.85}
-.sel-close-btn:disabled{opacity:.4;cursor:not-allowed}
-.sel-cancel-btn{font-size:11px;padding:5px 10px;border-radius:7px;border:1px solid var(--b2);background:transparent;color:var(--t3);cursor:pointer;transition:all .18s}
-.sel-cancel-btn:hover{color:var(--t2);border-color:var(--b3)}
-.ci-cb{width:16px;height:16px;border-radius:4px;border:1.5px solid var(--b3);background:var(--bg3);cursor:pointer;flex-shrink:0;display:none;accent-color:var(--Bl)}
-.sel-mode .ci-cb{display:block}
-.sel-mode .ci{cursor:pointer}
-.ci.selected{background:rgba(129,140,248,.08);border-left:3px solid var(--Bl)}
-.sel-all-btn{font-size:10px;color:var(--Bl);background:transparent;border:none;cursor:pointer;padding:0;font-family:var(--f);text-decoration:underline}
-.date-filter{display:flex;gap:5px;margin-bottom:8px;align-items:center;flex-wrap:wrap}
-.date-filter input[type=date]{flex:1;padding:5px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--b2);border-radius:var(--rs);color:var(--t);outline:none;min-width:0;font-family:var(--mono);transition:border .18s}
-.date-filter input[type=date]:focus{border-color:var(--Bl)}
-.date-filter input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.6);opacity:.8}
-.df-sep{font-size:10px;color:var(--t3);flex-shrink:0}
-.df-clear{font-size:10px;padding:4px 8px;border-radius:var(--rx);border:1px solid var(--b);background:transparent;color:var(--t3);cursor:pointer;white-space:nowrap;transition:all .18s}
-.df-clear:hover{background:var(--Rbg);color:var(--R);border-color:var(--R)}
-/* ── Sin respuesta ────────────────────── */
-.nr-table{width:100%;border-collapse:collapse;font-size:12px}
-.nr-table th{text-align:left;padding:7px 10px;font-size:9px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;border-bottom:1px solid var(--b);background:var(--bg3)}
-.nr-table td{padding:9px 10px;border-bottom:1px solid var(--b);color:var(--t2);vertical-align:middle}
-.nr-table tr:hover td{background:rgba(255,255,255,.015)}
-.nr-table td.nm{color:var(--t);font-weight:600}
-.nr-table td.mn{font-family:var(--mono);font-size:10px}
-.days-chip{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;font-family:var(--mono)}
-.dc-3{background:rgba(245,166,35,.12);color:var(--A)}
-.dc-5{background:rgba(255,87,87,.12);color:var(--R)}
-.dc-7{background:rgba(255,87,87,.22);color:var(--R)}
-/* ── Tasa respuesta ───────────────────── */
-.rr-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
-.rr-card{background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);padding:14px}
-.rr-title{font-size:10px;font-weight:700;color:var(--t3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px}
-.rr-donut{display:flex;align-items:center;gap:14px}
-.rr-legend{display:flex;flex-direction:column;gap:5px}
-.rr-leg-item{display:flex;align-items:center;gap:6px;font-size:11px}
-.rr-leg-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
-.rr-pct{font-size:18px;font-weight:300;color:var(--t);letter-spacing:-.03em;margin-top:2px}
-/* Período selector analítica */
-.period-sel{display:flex;gap:5px;flex-wrap:wrap}
-.ps-btn{font-size:11px;font-weight:600;padding:5px 12px;border-radius:7px;border:1px solid var(--b);background:transparent;color:var(--t3);transition:all .18s;font-family:var(--f)}
-.ps-btn:hover{background:var(--bg3);color:var(--t2)}
-.ps-btn.on{background:var(--grad1);color:#fff;border-color:transparent;box-shadow:0 2px 8px rgba(99,102,241,.25)}
-.ps-custom{display:none;gap:6px;align-items:center;margin-top:6px}
-.ps-custom.vis{display:flex}
-.ps-custom input[type=date]{padding:5px 8px;font-size:11px;background:var(--bg3);border:1px solid var(--b);border-radius:var(--rs);color:var(--t);outline:none;font-family:var(--mono);transition:border .18s}
-.ps-custom input[type=date]:focus{border-color:var(--G)}
-.ps-custom input[type=date]::-webkit-calendar-picker-indicator{filter:invert(.5)}
-.ps-apply{padding:5px 12px;font-size:11px;font-weight:700;background:var(--G);color:#051209;border:none;border-radius:var(--rs);font-family:var(--f)}
-
-/* ═══════════════════════════════════════════
-   RESPONSIVE
-═══════════════════════════════════════════ */
-
-/* ── Tablet (≤900px) ── */
-@media (max-width:900px) {
-  #ip { display:none }
-  #sb { width:260px; min-width:260px }
-}
-
-/* ── Mobile (≤640px) ── */
-@media (max-width:640px) {
-  /* Nav horizontal abajo */
-  #nav {
-    position:fixed;bottom:0;left:0;right:0;top:auto;
-    width:100%;height:56px;min-width:unset;
-    flex-direction:row;justify-content:space-around;align-items:center;
-    padding:0 8px;gap:0;
-    border-top:1px solid rgba(255,255,255,.08);
-    z-index:100;
-  }
-  .nav-logo { display:none }
-  .n-sp { display:none }
-  .live { display:none }
-  .agent-av { margin-bottom:0 }
-  .nb-logout { margin-top:0 }
-
-  /* Nav fijo abajo */
-  #nav {
-    position:fixed;
-    bottom:0;left:0;right:0;top:auto;
-    width:100%;
-    height:56px;
-    flex-direction:row;
-    justify-content:space-around;
-    align-items:center;
-    padding:0 8px;
-    gap:0;
-    border-top:1px solid rgba(255,255,255,.08);
-    z-index:200;
-  }
-
-  /* Shell ocupa toda la pantalla MENOS la barra de nav inferior */
-  #shell {
-    position:fixed;
-    top:0;left:0;right:0;
-    bottom:56px;
-    height:auto;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  body.test-mode #shell {
-    top:28px;
-    bottom:56px;
-    height:auto;
-  }
-
-  /* Páginas ocupan todo el shell */
-  .page { height:100%; overflow:hidden; }
-
-  /* Vista conversaciones */
-  #p-c { position:relative; overflow:hidden; }
-  #sb {
-    position:absolute;top:0;left:0;right:0;bottom:0;
-    width:100%;min-width:unset;
-    z-index:10;
-    transition:transform .25s var(--ease);
-    display:flex;flex-direction:column;
-    overflow:hidden;
-  }
-  #sb.hidden { transform:translateX(-100%) }
-  #conv-list { flex:1; overflow-y:auto; }
-
-  /* Chat */
-  #chat {
-    position:absolute;top:0;left:0;right:0;bottom:0;
-    z-index:20;
-    display:none;
-    flex-direction:column;
-    overflow:hidden;
-  }
-  #chat.mobile-open { display:flex }
-
-  /* Mensajes se expanden, input fijo abajo */
-  #msgs { flex:1; overflow-y:auto; min-height:0; padding:12px 10px; }
-  #in-zone {
-    flex-shrink:0;
-    padding:8px 10px;
-    background:var(--bg2);
-    border-top:1px solid var(--b);
-  }
-
-  /* Mensajes — dejar espacio para que el último no quede tapado */
-  #msgs { padding:12px 10px 12px; }
-
-  /* Info panel oculto en mobile */
-  #ip { display:none }
-
-  /* Botón volver en cabecera del chat */
-  .ch-back {
-    display:flex;align-items:center;justify-content:center;
-    width:32px;height:32px;border-radius:8px;border:none;
-    background:transparent;color:var(--t2);cursor:pointer;flex-shrink:0;
-    transition:background .18s;
-  }
-  .ch-back:hover { background:var(--bg3) }
-  .ch-back svg { width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round }
-
-  /* Header chat compacto */
-  #ch-head { padding:8px 12px;gap:6px }
-  .schip { display:none }
-  .ch-acts { gap:4px }
-  .hb { height:28px;padding:0 8px;font-size:10px }
-
-  /* Mensajes burbujas */
-  .msg { max-width:88% }
-
-  /* Templates */
-  .tpls { gap:4px }
-  .tc { font-size:10px;padding:3px 8px }
-
-  /* Sidebar compacto */
-  #sb-top { padding:12px 12px 6px }
-  .tabs { margin-bottom:6px }
-
-  /* Analytics: 2 columnas */
-  .kg { grid-template-columns:1fr 1fr }
-  .cg { grid-template-columns:1fr }
-  .cc.wide { grid-column:1 }
-  .rr-grid { grid-template-columns:1fr }
-
-  /* Admin grid 1 col */
-  .adm-agents-grid { grid-template-columns:1fr }
-
-  /* Login */
-  .login-box { width:92vw;padding:28px 22px }
-  #setup-2fa-screen { width:92vw !important }
-}
-
-/* ── Mobile pequeño (≤380px) ── */
-@media (max-width:380px) {
-  .kg { grid-template-columns:1fr }
-  .msg { max-width:94% }
-}
-</style>
-</head>
-<body>
-<div id="test-banner">⚠️ &nbsp; ENTORNO DE PRUEBAS — Los datos no son reales &nbsp; ⚠️</div>
-
-<!-- ═══ LOGIN ═══ -->
-<div id="login-screen">
-  <div class="login-box">
-    <div class="login-logo">
-      <div class="login-logo-ico">
-        <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-      </div>
-      <div><h1>WA Manager Pro</h1><span>Gestión de conversaciones</span></div>
-    </div>
-    <div class="lf-label">Usuario</div>
-    <input class="lf-input" id="l-user" type="text" placeholder="angel / clara / admin" autocomplete="username">
-    <div class="lf-label">Contraseña</div>
-    <input class="lf-input" id="l-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')doLogin()">
-    <button class="lf-btn" onclick="doLogin()">Entrar</button>
-    <div class="lf-err" id="l-err"></div>
-  </div>
-
-  <!-- ── Pantalla: configurar 2FA por primera vez ── -->
-  <div class="login-box" id="setup-2fa-screen" style="display:none;width:400px">
-    <div class="login-logo">
-      <div class="login-logo-ico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#051209" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      </div>
-      <div><h1>Activar 2FA</h1><span>Configura Google Authenticator</span></div>
-    </div>
-    <div class="tfa-steps">
-      <b>1.</b> Abre <b>Google Authenticator</b> en tu móvil<br>
-      <b>2.</b> Pulsa <b>+</b> → <b>Escanear código QR</b><br>
-      <b>3.</b> Escanea el código de abajo<br>
-      <b>4.</b> Introduce el código de 6 dígitos que aparece
-    </div>
-    <div class="tfa-qr"><img id="tfa-qr-img" src="" alt="QR"></div>
-    <div class="tfa-secret" id="tfa-secret"></div>
-    <div class="lf-label">Código de verificación</div>
-    <input class="tfa-code-input" id="tfa-setup-code" type="text" maxlength="6" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')confirmSetup2FA()">
-    <button class="lf-btn" onclick="confirmSetup2FA()">Activar 2FA</button>
-    <div class="lf-err" id="tfa-setup-err"></div>
-  </div>
-
-  <!-- ── Pantalla: verificar código 2FA ── -->
-  <div class="login-box" id="verify-2fa-screen" style="display:none">
-    <div class="login-logo">
-      <div class="login-logo-ico">
-        <svg viewBox="0 0 24 24" fill="none" stroke="#051209" stroke-width="2"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg>
-      </div>
-      <div><h1>Verificación 2FA</h1><span>Google Authenticator</span></div>
-    </div>
-    <p style="font-size:12px;color:var(--t3);margin-bottom:16px">Introduce el código de 6 dígitos de tu app Google Authenticator</p>
-    <div class="lf-label">Código</div>
-    <input class="tfa-code-input" id="tfa-verify-code" type="text" maxlength="6" placeholder="000000" autocomplete="one-time-code" onkeydown="if(event.key==='Enter')verifyLogin2FA()">
-    <button class="lf-btn" onclick="verifyLogin2FA()">Verificar</button>
-    <div class="lf-err" id="tfa-verify-err"></div>
-    <button style="margin-top:10px;width:100%;padding:8px;font-size:11px;background:transparent;border:none;color:var(--t3);cursor:pointer" onclick="backToLogin()">← Volver al login</button>
-  </div>
-</div>
-
-<!-- ═══ SHELL ═══ -->
-<div id="shell">
-  <nav id="nav">
-    <div class="nav-logo">
-      <svg viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413Z"/></svg>
-    </div>
-    <button class="nb on" id="nb-c" onclick="goPage('c',this)" title="Conversaciones">
-      <svg viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
-      <span class="pip" id="upip">0</span>
-    </button>
-    <button class="nb" id="nb-a" onclick="goPage('a',this)" title="Analítica">
-      <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-    </button>
-    <button class="nb" id="nb-admin" onclick="goPage('admin',this)" title="Administración" style="display:none">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M20 21a8 8 0 1 0-16 0"/></svg>
-    </button>
-    <div class="n-sp"></div>
-    <div class="agent-av" id="agent-av"></div>
-    <button class="nb nb-logout" onclick="doLogout()" title="Cerrar sesión">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
-    </button>
-    <div class="live" id="live"></div>
-  </nav>
-
-  <!-- ══ CONVERSACIONES ══ -->
-  <div class="page on" id="p-c">
-    <div id="sb">
-      <div id="sb-top">
-        <h2 id="sb-title">Conversaciones <span class="wa-chip" id="wa-chip"></span></h2>
-        <div class="tabs">
-          <button class="tab on" onclick="setTab('all',this)">Todas</button>
-          <button class="tab"    onclick="setTab('active',this)">Activas</button>
-          <button class="tab"    onclick="setTab('closed',this)">Cerradas</button>
-        </div>
-        <div id="qf-row">
-          <button class="qf alta"  onclick="setQF('alta',this)">ALTA</button>
-          <button class="qf media" onclick="setQF('media',this)">MEDIA</button>
-          <button class="qf baja"  onclick="setQF('baja',this)">BAJA</button>
-        </div>
-        <div class="srch">
-          <svg class="si" viewBox="0 0 24 24" fill="none" stroke="currentColor"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" placeholder="Buscar..." oninput="setSearch(this.value)">
-        </div>
-        <div class="date-filter">
-          <input type="date" id="df-from" onchange="applyDateFilter()" title="Desde">
-          <span class="df-sep">→</span>
-          <input type="date" id="df-to" onchange="applyDateFilter()" title="Hasta">
-          <button class="df-clear" onclick="clearDateFilter()" title="Quitar filtro">✕</button>
-        </div>
-        <div style="display:flex;align-items:center;justify-content:space-between;padding:4px 0 2px">
-          <button class="sel-cancel-btn" id="sel-toggle-btn" onclick="toggleSelMode()" style="font-size:10px;padding:4px 9px">Seleccionar</button>
-          <button class="sel-all-btn" id="sel-all-btn" onclick="selectAll()" style="display:none">Seleccionar todo</button>
-        </div>
-      </div>
-      <!-- Barra de cierre masivo -->
-      <div class="sel-bar" id="sel-bar">
-        <span class="sel-count" id="sel-count">0 seleccionadas</span>
-        <div style="display:flex;gap:6px">
-          <button class="sel-cancel-btn" onclick="toggleSelMode()">Cancelar</button>
-          <button class="sel-close-btn" id="sel-close-btn" onclick="closeSelected()" disabled>Cerrar seleccionadas</button>
-        </div>
-      </div>
-      <div id="conv-list"></div>
-    </div>
-
-    <div id="chat">
-      <div id="ch-head">
-        <button class="ch-back" id="ch-back-btn" onclick="mobileBack()" style="display:none">
-          <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
-        </button>
-        <div id="ch-c" class="ch-l"><p style="color:var(--t3);font-size:12px">Selecciona una conversación</p></div>
-        <div class="ch-acts" id="ch-acts" style="display:none">
-          <span class="schip" id="sess-chip"></span>
-          <button class="hb rev" id="btn-rev" onclick="openModal()">
-            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            Añadir revisión
-          </button>
-          <button class="hb close-btn" id="btn-close" onclick="closeSession()">
-            <svg viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
-            Cerrar
-          </button>
-        </div>
-      </div>
-      <div id="msgs"><div class="empty-c"><div class="ico">💬</div><p style="font-size:12px;color:var(--t3)">Selecciona una conversación</p></div></div>
-      <div id="in-zone" style="display:none">
-        <div class="tpls">
-          <button class="tc" onclick="tpl('¡Hola! ¿En qué puedo ayudarte hoy?')">👋 Saludo</button>
-          <button class="tc" onclick="tpl('Déjame revisar y te respondo enseguida.')">⏳ Revisando</button>
-          <button class="tc" onclick="tpl('Gracias por contactarnos. Ha sido un placer.')">🙏 Cierre</button>
-          <button class="tc" onclick="tpl('Tu pedido está confirmado y saldrá en 24h.')">📦 Pedido</button>
-          <button class="tc" onclick="tpl('¿Puedes darme más detalles para ayudarte mejor?')">❓ Más info</button>
-        </div>
-        <div class="in-row">
-          <textarea id="msg-in" placeholder="Escribe un mensaje... (Enter para enviar)" onkeydown="handleKey(event)"></textarea>
-          <button id="send-b" onclick="sendMsg()">Enviar ↑</button>
-        </div>
-      </div>
-    </div>
-
-    <div id="ip"><div class="iph">Info</div><p style="font-size:11px;color:var(--t3)">Selecciona una conversación</p></div>
-  </div>
-
-  <!-- ══ ANALÍTICA ══ -->
-  <div class="page" id="p-a">
-    <div class="a-hd">
-      <div><h2>Analítica</h2><p class="sub" id="a-period-lbl">Período personalizable</p></div>
-      <div class="a-controls">
-        <select class="agsel" id="ag-sel" style="display:none" onchange="loadAnalytics()">
-          <option value="">Todos los agentes</option>
-        </select>
-        <div class="af">
-          <button class="afb on"    onclick="setAF('all',this)">Todas</button>
-          <button class="afb alta"  onclick="setAF('alta',this)">Alta</button>
-          <button class="afb media" onclick="setAF('media',this)">Media</button>
-          <button class="afb baja"  onclick="setAF('baja',this)">Baja</button>
-        </div>
-      </div>
-    </div>
-    <!-- Selector de período -->
-    <div>
-      <div class="period-sel">
-        <button class="ps-btn on" onclick="setPeriod('week',this)">Últimos 7 días</button>
-        <button class="ps-btn"    onclick="setPeriod('month',this)">Últimos 30 días</button>
-        <button class="ps-btn"    onclick="setPeriod('quarter',this)">Últimos 90 días</button>
-        <button class="ps-btn"    onclick="setPeriod('custom',this)">Personalizado</button>
-      </div>
-      <div class="ps-custom" id="ps-custom">
-        <input type="date" id="a-from" placeholder="Desde">
-        <span style="font-size:11px;color:var(--t3)">→</span>
-        <input type="date" id="a-to" placeholder="Hasta">
-        <button class="ps-apply" onclick="applyCustomPeriod()">Aplicar</button>
-      </div>
-    </div>
-
-    <!-- KPIs -->
-    <div class="kg">
-      <div class="kpi"><div class="kpi-l">Conversaciones</div><div class="kpi-v g" id="k-tot">—</div><div class="kpi-s">este período</div></div>
-      <div class="kpi"><div class="kpi-l">Con mensajes</div><div class="kpi-v"   id="k-msg">—</div><div class="kpi-s">cliente o agente</div></div>
-      <div class="kpi"><div class="kpi-l">Revisiones total</div><div class="kpi-v"   id="k-rev">—</div><div class="kpi-s">todas las sesiones</div></div>
-      <div class="kpi"><div class="kpi-l">Alta</div><div class="kpi-v g"             id="k-alt">—</div><div class="kpi-s">revisiones</div></div>
-      <div class="kpi"><div class="kpi-l">Media</div><div class="kpi-v a"            id="k-med">—</div><div class="kpi-s">revisiones</div></div>
-      <div class="kpi"><div class="kpi-l">Baja</div><div class="kpi-v r"             id="k-baj">—</div><div class="kpi-s">revisiones</div></div>
-    </div>
-
-    <!-- Gráficos principales -->
-    <div class="cg">
-      <div class="cc wide"><div class="cct">Revisiones por día <span>por calidad</span></div><div class="cw tall"><canvas id="ch-d"></canvas></div></div>
-      <!-- Distribución global -->
-      <div class="cc"><div class="cct">Distribución global <span>por calidad</span></div><div class="cw"><canvas id="ch-q"></canvas></div></div>
-      <!-- Distribución por agente -->
-      <div class="cc"><div class="cct">Distribución por agente <span id="ag-chart-lbl"></span></div>
-        <table class="at" id="ag-t"><thead><tr><th>Agente</th><th style="color:var(--G)">Alta</th><th style="color:var(--A)">Media</th><th style="color:var(--R)">Baja</th><th>Total</th></tr></thead><tbody></tbody></table>
-      </div>
-      <!-- Gráfico barras por agente -->
-      <div class="cc" id="ag-chart-box" style="display:none"><div class="cct">Calidad por agente <span>barras</span></div><div class="cw"><canvas id="ch-ag"></canvas></div></div>
-    </div>
-
-    <!-- Tasa de respuesta semana ANTERIOR y mes ANTERIOR -->
-    <div class="cc wide">
-      <div class="cct">Respondidos vs Sin respuesta <span>semana anterior y mes anterior</span></div>
-      <div class="rr-grid" id="rr-grid">
-        <div class="rr-card">
-          <div class="rr-title" id="rr-w-title">Últimos 7 días</div>
-          <div class="rr-donut">
-            <canvas id="rr-week-chart" width="80" height="80"></canvas>
-            <div>
-              <div class="rr-legend">
-                <div class="rr-leg-item"><div class="rr-leg-dot" style="background:var(--G)"></div><span id="rr-w-rep">— respondidos</span></div>
-                <div class="rr-leg-item"><div class="rr-leg-dot" style="background:var(--R)"></div><span id="rr-w-nrp">— sin respuesta</span></div>
-              </div>
-              <div class="rr-pct" id="rr-w-pct">—%</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">tasa de respuesta</div>
-            </div>
-          </div>
-        </div>
-        <div class="rr-card">
-          <div class="rr-title" id="rr-m-title">Últimos 30 días</div>
-          <div class="rr-donut">
-            <canvas id="rr-month-chart" width="80" height="80"></canvas>
-            <div>
-              <div class="rr-legend">
-                <div class="rr-leg-item"><div class="rr-leg-dot" style="background:var(--G)"></div><span id="rr-m-rep">— respondidos</span></div>
-                <div class="rr-leg-item"><div class="rr-leg-dot" style="background:var(--R)"></div><span id="rr-m-nrp">— sin respuesta</span></div>
-              </div>
-              <div class="rr-pct" id="rr-m-pct">—%</div>
-              <div style="font-size:10px;color:var(--t3);margin-top:2px">tasa de respuesta</div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-  </div>
-
-  <!-- ══ ADMIN ══ -->
-  <div class="page" id="p-admin">
-    <div class="adm-hd" style="margin-bottom:20px">
-      <div><h2>Administración</h2><p style="font-size:12px;color:var(--t3);margin-top:2px">Gestión de agentes y contraseñas</p></div>
-    </div>
-    <div class="adm-section">
-      <div class="adm-section-title">🔑 Cambiar contraseña de agentes</div>
-      <div class="adm-agents-grid" id="adm-agents-grid">
-        <p style="color:var(--t3);font-size:12px">Cargando agentes...</p>
-      </div>
-    </div>
-    <div class="adm-section">
-      <div class="adm-section-title">🗑️ Limpiar base de datos</div>
-      <p style="font-size:12px;color:var(--t3);margin-bottom:14px">Borra todas las conversaciones, mensajes y contactos. Los agentes y sus contraseñas no se borran.</p>
-      <button class="adm-pw-btn" style="background:var(--R);color:#fff;padding:10px 20px;font-size:12px" onclick="resetDB()">Borrar todas las conversaciones</button>
-      <div id="reset-msg" style="font-size:11px;margin-top:10px;min-height:16px"></div>
-    </div>
-  </div>
-
-</div>
-
-<div id="ov">
-  <div id="modal">
-    <div class="m-ttl">Añadir revisión</div>
-    <div class="m-sub" id="m-sub"></div>
-    <div class="prev-revs" id="prev-revs" style="display:none">
-      <div class="pr-ttl">Revisiones anteriores de esta sesión</div>
-      <div id="prev-revs-list"></div>
-    </div>
-    <div class="qcards">
-      <div class="qcard qc-A" onclick="selQ('alta')"><div class="qc-ico">🟢</div><div class="qc-lbl">ALTA</div><div class="qc-desc">Cliente interesado, conversación de valor</div></div>
-      <div class="qcard qc-M" onclick="selQ('media')"><div class="qc-ico">🟡</div><div class="qc-lbl">MEDIA</div><div class="qc-desc">Interés moderado, seguimiento necesario</div></div>
-      <div class="qcard qc-B" onclick="selQ('baja')"><div class="qc-ico">🔴</div><div class="qc-lbl">BAJA</div><div class="qc-desc">Sin engagement, respuesta mínima</div></div>
-    </div>
-    <textarea class="m-note" id="m-note" placeholder="Nota sobre esta revisión (opcional)..."></textarea>
-    <div class="m-acts">
-      <button class="m-cancel" onclick="closeModal()">Cancelar</button>
-      <button class="m-ok" id="m-ok" onclick="confirmReview()" disabled>Guardar revisión</button>
-    </div>
-  </div>
-</div>
-
-<div id="toast"></div>
-
-<script>
-'use strict';
-// ═══════════════════════════════════════════
-// ESTADO
-// ═══════════════════════════════════════════
-const API = '';
-let token    = localStorage.getItem('wa_token') || null;
-let me       = JSON.parse(localStorage.getItem('wa_me') || 'null');
-let sessions = {};
-let activeId = null;
-let tabF = 'all', qF = null, srch = '';
-let afF = 'all', agF = '';
-let avMap = {}, avN = 0;
-let charts = {};
-let pendingId = null, selQual = null;
-let sse = null;
-
-// ═══════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════
-let pendingAgentId = null;
-let pendingUser = null;
-let pendingPass = null;
-
-async function doLogin() {
-  const user = document.getElementById('l-user').value.trim();
-  const pass = document.getElementById('l-pass').value;
-  document.getElementById('l-err').textContent = '';
-  if (!user||!pass) { document.getElementById('l-err').textContent='Rellena usuario y contraseña'; return; }
-  try {
-    const r = await fetch(API+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:user,password:pass})});
-    const d = await r.json();
-    if (d.error) { document.getElementById('l-err').textContent=d.error; return; }
-
-    // Primera vez — configurar 2FA
-    if (d.requires_2fa_setup) {
-      pendingAgentId = d.agent_id;
-      pendingUser = user; pendingPass = pass;
-      document.getElementById('tfa-qr-img').src = d.qr;
-      document.getElementById('tfa-secret').textContent = 'Código manual: ' + d.secret;
-      document.getElementById('login-screen').querySelector('.login-box').style.display = 'none';
-      document.getElementById('setup-2fa-screen').style.display = 'block';
-      setTimeout(() => document.getElementById('tfa-setup-code').focus(), 100);
-      return;
-    }
-
-    // 2FA ya configurado — pedir código
-    if (d.requires_2fa) {
-      pendingUser = user; pendingPass = pass;
-      document.getElementById('login-screen').querySelector('.login-box').style.display = 'none';
-      document.getElementById('verify-2fa-screen').style.display = 'block';
-      setTimeout(() => document.getElementById('tfa-verify-code').focus(), 100);
-      return;
-    }
-
-    // Login completo
-    token = d.token; me = d.agent;
-    localStorage.setItem('wa_token', token);
-    localStorage.setItem('wa_me', JSON.stringify(me));
-    startApp();
-  } catch(e) {
-    document.getElementById('l-err').textContent='No se pudo conectar al servidor';
-  }
-}
-
-async function confirmSetup2FA() {
-  const code = document.getElementById('tfa-setup-code').value.trim();
-  document.getElementById('tfa-setup-err').textContent = '';
-  if (code.length !== 6) { document.getElementById('tfa-setup-err').textContent='El código debe tener 6 dígitos'; return; }
-  try {
-    const r = await fetch(API+'/api/auth/2fa/confirm',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({agent_id:pendingAgentId,totp_code:code})});
-    const d = await r.json();
-    if (d.error) { document.getElementById('tfa-setup-err').textContent=d.error; return; }
-    // 2FA activado — hacer login completo
-    document.getElementById('setup-2fa-screen').style.display = 'none';
-    document.getElementById('verify-2fa-screen').style.display = 'block';
-    document.getElementById('tfa-verify-code').value = '';
-    setTimeout(() => document.getElementById('tfa-verify-code').focus(), 100);
-  } catch(e) { document.getElementById('tfa-setup-err').textContent='Error de conexión'; }
-}
-
-async function verifyLogin2FA() {
-  const code = document.getElementById('tfa-verify-code').value.trim();
-  document.getElementById('tfa-verify-err').textContent = '';
-  if (code.length !== 6) { document.getElementById('tfa-verify-err').textContent='El código debe tener 6 dígitos'; return; }
-  try {
-    const r = await fetch(API+'/api/auth/login',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({username:pendingUser,password:pendingPass,totp_code:code})});
-    const d = await r.json();
-    if (d.error) { document.getElementById('tfa-verify-err').textContent=d.error; return; }
-    token = d.token; me = d.agent;
-    localStorage.setItem('wa_token', token);
-    localStorage.setItem('wa_me', JSON.stringify(me));
-    startApp();
-  } catch(e) { document.getElementById('tfa-verify-err').textContent='Error de conexión'; }
-}
-
-function backToLogin() {
-  pendingUser = null; pendingPass = null; pendingAgentId = null;
-  document.getElementById('verify-2fa-screen').style.display = 'none';
-  document.getElementById('setup-2fa-screen').style.display = 'none';
-  document.getElementById('login-screen').querySelector('.login-box').style.display = 'block';
-  document.getElementById('l-pass').value = '';
-  document.getElementById('l-err').textContent = '';
-}
-
-function doLogout() {
-  token=null; me=null; sessions={};
-  localStorage.removeItem('wa_token'); localStorage.removeItem('wa_me');
-  sse?.close();
-  document.getElementById('shell').style.display='none';
-  document.getElementById('login-screen').style.display='flex';
-}
-
-// ═══════════════════════════════════════════
-// ARRANQUE
-// ═══════════════════════════════════════════
-function startApp() {
-  document.getElementById('login-screen').style.display='none';
-  document.getElementById('shell').style.display='flex';
-  const av = document.getElementById('agent-av');
-  av.textContent = me.name.slice(0,2).toUpperCase();
-  av.style.background = me.color+'22';
-  av.style.color = me.color;
-  av.title = me.name + ' (' + me.role + ')';
-  const chip = document.getElementById('wa-chip');
-  if (me.role==='agent') { chip.textContent='WA '+me.name; chip.style.cssText=`color:${me.color};border-color:${me.color}44;background:${me.color}11`; }
-  else { chip.textContent='Admin'; chip.style.cssText='color:var(--Pu);border-color:rgba(167,139,250,.3);background:var(--Pubg)'; }
-  if (me.role==='admin') document.getElementById('nb-admin').style.display='flex';
-  loadSessions();
-}
-
-// Auto-login — verifica token contra el servidor
-window.addEventListener('DOMContentLoaded', async () => {
-  // 1. Siempre mostrar login primero — nunca pantalla negra
-  document.getElementById('login-screen').style.display = 'flex';
-  document.getElementById('shell').style.display = 'none';
-
-  // 2. Detectar entorno TEST (silencioso si falla)
-  try {
-    const envRes = await fetch(API + '/api/env');
-    if (envRes.ok) {
-      const d = await envRes.json();
-      if (d.env === 'test') {
-        document.getElementById('test-banner').classList.add('visible');
-        document.body.classList.add('test-mode');
-        document.title = '[TEST] WA Manager Pro';
-      }
-    }
-  } catch {}
-
-  // 3. Si hay token guardado, verificarlo — si es válido entrar directo
-  if (token && me) {
-    try {
-      const r = await fetch(API + '/api/auth/me', {
-        headers: { 'Authorization': 'Bearer ' + token }
-      });
-      if (r.ok) { startApp(); return; }
-    } catch {}
-    // Token inválido o expirado — limpiar
-    localStorage.removeItem('wa_token');
-    localStorage.removeItem('wa_me');
-    token = null;
-    me = null;
-  }
-  // Si llegamos aquí, mostrar login
-  document.getElementById('login-screen').style.display = 'flex';
+// v3 - fix analytics - fix hora Madrid
+/**
+ * WA Manager Pro — server.js
+ * ═══════════════════════════════════════════════════════
+ * Base de datos : PostgreSQL (via pg pool)
+ * Auth          : JWT + bcryptjs
+ * Tiempo real   : SSE (Server-Sent Events)
+ * Integración   : Sistema externo AWS via POST /messages/incoming
+ * ═══════════════════════════════════════════════════════
+ */
+
+require('dotenv').config();
+const express      = require('express');
+const cors         = require('cors');
+const path         = require('path');
+const bcrypt       = require('bcryptjs');
+const jwt          = require('jsonwebtoken');
+const { Pool }     = require('pg');
+const helmet       = require('helmet');
+const rateLimit    = require('express-rate-limit');
+const speakeasy    = require('speakeasy');
+const QRCode       = require('qrcode');
+
+const app = express();
+
+// Railway usa proxy — necesario para rate limiting y IPs correctas
+app.set('trust proxy', 1);
+
+// ─── Cabeceras de seguridad HTTP (Helmet) ─────────────────
+app.use(helmet({
+  contentSecurityPolicy: false,
+  crossOriginEmbedderPolicy: false,
+}));
+
+// ─── CORS restringido ─────────────────────────────────────
+const allowedOrigins = (process.env.ALLOWED_ORIGINS || '')
+  .split(',').map(o => o.trim()).filter(Boolean);
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    if (allowedOrigins.length === 0 || allowedOrigins.includes(origin)) return cb(null, true);
+    cb(new Error('CORS: origen no permitido'));
+  },
+  credentials: true,
+}));
+
+// ─── Límite de tamaño del body (50 KB) ───────────────────
+app.use(express.json({ limit: '50kb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ─── Rate limiting ────────────────────────────────────────
+const loginLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, max: 10,
+  message: { error: 'Demasiados intentos. Espera 15 minutos.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const apiLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 200,
+  message: { error: 'Demasiadas peticiones. Intenta en unos segundos.' },
+  standardHeaders: true, legacyHeaders: false,
+});
+const webhookLimiter = rateLimit({
+  windowMs: 60 * 1000, max: 2000,
+  message: { error: 'Rate limit excedido en webhook.' },
 });
 
-// ── Filtro de fechas en bandeja ───────────────────────────
-let dateFrom = null, dateTo = null;
+app.use('/api/', apiLimiter);
+app.use('/messages/', webhookLimiter);
+app.use('/webhook', webhookLimiter);
 
-function applyDateFilter() {
-  dateFrom = document.getElementById('df-from').value || null;
-  dateTo   = document.getElementById('df-to').value   || null;
-  loadSessionsWithDates();
+// ─── Cola de mensajes entrantes ───────────────────────────
+// Procesa hasta 50 mensajes simultáneos, el resto espera en cola
+const messageQueue   = [];
+let   activeWorkers  = 0;
+const MAX_WORKERS    = 50;
+
+function enqueueMessage(task) {
+  return new Promise((resolve, reject) => {
+    messageQueue.push({ task, resolve, reject });
+    processQueue();
+  });
 }
 
-function clearDateFilter() {
-  dateFrom = null; dateTo = null;
-  document.getElementById('df-from').value = '';
-  document.getElementById('df-to').value   = '';
-  loadSessionsWithDates();
+function processQueue() {
+  while (activeWorkers < MAX_WORKERS && messageQueue.length > 0) {
+    const { task, resolve, reject } = messageQueue.shift();
+    activeWorkers++;
+    task()
+      .then(resolve)
+      .catch(reject)
+      .finally(() => { activeWorkers--; processQueue(); });
+  }
 }
 
-async function loadSessionsWithDates() {
+// Log del estado de la cola cada 30s si hay actividad
+setInterval(() => {
+  if (messageQueue.length > 0 || activeWorkers > 0) {
+    console.log(`📊 Cola: ${messageQueue.length} esperando, ${activeWorkers} procesando`);
+  }
+}, 30000);
+
+// ─── Entorno ──────────────────────────────────────────────
+const IS_TEST = (process.env.NODE_ENV || 'production') === 'test';
+
+if (IS_TEST) {
+  console.log('⚠️  Arrancando en modo TEST — datos de prueba, no usar en producción');
+} else {
+  const required = ['JWT_SECRET', 'EXTERNAL_API_KEY', 'DATABASE_URL'];
+  const missing  = required.filter(k => !process.env[k]);
+  if (missing.length) {
+    console.error(`❌ Variables de entorno obligatorias en PROD: ${missing.join(', ')}`);
+    process.exit(1);
+  }
+}
+
+const PORT        = process.env.PORT || 3000;
+const JWT_SECRET  = process.env.JWT_SECRET  || (IS_TEST ? 'test_secret_inseguro' : '');
+const EXT_API_KEY = process.env.EXTERNAL_API_KEY || (IS_TEST ? 'test_api_key' : '');
+const EXT_SEND    = process.env.EXTERNAL_SEND_URL || '';
+
+// ─── Base de datos PostgreSQL ─────────────────────────────
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: process.env.DATABASE_URL?.includes('railway') ? { rejectUnauthorized: false } : false,
+  max: 20,                // máximo 20 conexiones simultáneas
+  idleTimeoutMillis: 30000,
+  connectionTimeoutMillis: 2000,
+});
+
+// Wrappers compatibles con el código existente
+const run = async (sql, params=[]) => {
+  // Convertir ? a $1, $2... (PostgreSQL usa $N en vez de ?)
+  let i = 0;
+  const pgSql = sql.replace(/\?/g, () => `$${++i}`);
+  // Convertir sintaxis SQLite a PostgreSQL
+  const pgSqlFinal = pgSql
+    .replace(/INTEGER PRIMARY KEY AUTOINCREMENT/g, 'SERIAL PRIMARY KEY')
+    .replace(/datetime\('now'\)/g, "NOW()")
+    .replace(/INSERT OR IGNORE/g, 'INSERT')
+    .replace(/ON CONFLICT DO NOTHING/g, '')
+    .replace(/PRAGMA foreign_keys = ON/g, 'SET session_replication_role = DEFAULT');
+  const res = await pool.query(pgSqlFinal, params);
+  return { lastID: res.rows[0]?.id || null, changes: res.rowCount };
+};
+
+const get = async (sql, params=[]) => {
+  let i = 0;
+  const pgSql = sql.replace(/\?/g, () => `$${++i}`)
+    .replace(/datetime\('now'\)/g, "NOW()")
+    .replace(/date\(([^)]+)\)/g, "$1::date")
+    .replace(/strftime\('%Y-%m-%d',([^)]+)\)/g, "TO_CHAR($1, 'YYYY-MM-DD')")
+    .replace(/strftime\('%Y-%m',([^)]+)\)/g, "TO_CHAR($1, 'YYYY-MM')")
+    .replace(/strftime\('%Y-W%W',([^)]+)\)/g, "TO_CHAR($1, 'IYYY-IW')")
+    .replace(/julianday\('now'\)-julianday\(([^)]+)\)/g, "EXTRACT(EPOCH FROM (NOW()-$1))/86400")
+    .replace(/CAST\(julianday\('now'\)-julianday\(([^)]+)\) AS INTEGER\)/g, "FLOOR(EXTRACT(EPOCH FROM (NOW()-$1))/86400)")
+    .replace(/PRAGMA foreign_keys = ON/g, 'SET session_replication_role = DEFAULT');
+  const res = await pool.query(pgSql, params);
+  // Normalizar nombres de columnas (pg devuelve en minúsculas)
+  return res.rows[0] ? normalizeRow(res.rows[0]) : undefined;
+};
+
+const all = async (sql, params=[]) => {
+  let i = 0;
+  const pgSql = sql.replace(/\?/g, () => `$${++i}`)
+    .replace(/datetime\('now'\)/g, "NOW()")
+    .replace(/date\(([^)]+)\)/g, "$1::date")
+    .replace(/strftime\('%Y-%m-%d',([^)]+)\)/g, "TO_CHAR($1, 'YYYY-MM-DD')")
+    .replace(/strftime\('%Y-%m',([^)]+)\)/g, "TO_CHAR($1, 'YYYY-MM')")
+    .replace(/strftime\('%Y-W%W',([^)]+)\)/g, "TO_CHAR($1, 'IYYY-IW')")
+    .replace(/julianday\('now'\)-julianday\(([^)]+)\)/g, "EXTRACT(EPOCH FROM (NOW()-$1))/86400")
+    .replace(/CAST\(julianday\('now'\)-julianday\(([^)]+)\) AS INTEGER\)/g, "FLOOR(EXTRACT(EPOCH FROM (NOW()-$1))/86400)")
+    .replace(/PRAGMA foreign_keys = ON/g, 'SET session_replication_role = DEFAULT');
+  const res = await pool.query(pgSql, params);
+  return res.rows.map(normalizeRow);
+};
+
+// Normalizar row — convertir timestamps a string ISO
+function normalizeRow(row) {
+  const out = {};
+  for (const [k, v] of Object.entries(row)) {
+    out[k] = v instanceof Date ? v.toISOString() : v;
+  }
+  return out;
+}
+
+// ─── Inicializar tablas ───────────────────────────────────
+async function initDB() {
+  const client = await pool.connect();
   try {
-    let url = API + '/api/sessions';
-    const params = [];
-    if (dateFrom) params.push('from=' + dateFrom + 'T00:00:00');
-    if (dateTo)   params.push('to='   + dateTo   + 'T23:59:59');
-    if (params.length) url += '?' + params.join('&');
-    const r = await authFetch(url);
-    const data = await r.json();
-    // Merge: keep sessions not in range in memory, replace those in range
-    if (dateFrom || dateTo) {
-      // Filtered view: replace all with filtered results
-      sessions = {};
-      data.forEach(c => sessions[c.sessionId] = c);
-    } else {
-      sessions = {};
-      data.forEach(c => sessions[c.sessionId] = c);
-    }
-    renderList(); updatePip();
-  } catch { /* fallback to local */ renderList(); }
+    await client.query('BEGIN');
+
+    await client.query(`CREATE TABLE IF NOT EXISTS agents (
+      id         SERIAL PRIMARY KEY,
+      username   TEXT UNIQUE NOT NULL,
+      name       TEXT NOT NULL,
+      role       TEXT NOT NULL DEFAULT 'agent',
+      color      TEXT DEFAULT '#00e5a0',
+      password   TEXT NOT NULL,
+      totp_secret TEXT DEFAULT NULL,
+      totp_enabled BOOLEAN DEFAULT FALSE,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS wa_accounts (
+      id              SERIAL PRIMARY KEY,
+      agent_id        INTEGER NOT NULL REFERENCES agents(id),
+      display_name    TEXT NOT NULL,
+      phone_number_id TEXT NOT NULL DEFAULT '',
+      wa_token        TEXT NOT NULL DEFAULT '',
+      verify_token    TEXT NOT NULL DEFAULT '',
+      created_at      TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS contacts (
+      phone        TEXT PRIMARY KEY,
+      name         TEXT NOT NULL DEFAULT 'Desconocido',
+      avatar       TEXT DEFAULT '??',
+      email        TEXT DEFAULT '',
+      client_id    TEXT DEFAULT '',
+      contact_note TEXT DEFAULT '',
+      tags         TEXT DEFAULT '[]',
+      created_at   TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS sessions (
+      id              SERIAL PRIMARY KEY,
+      phone           TEXT NOT NULL,
+      wa_account_id   INTEGER NOT NULL,
+      agent_id        INTEGER NOT NULL,
+      flow            TEXT DEFAULT 'cliente',
+      status          TEXT DEFAULT 'active',
+      unread          INTEGER DEFAULT 1,
+      preview         TEXT DEFAULT '',
+      started_at      TIMESTAMPTZ DEFAULT NOW(),
+      last_message_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS reviews (
+      id         SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL,
+      agent_id   INTEGER NOT NULL,
+      quality    TEXT NOT NULL,
+      note       TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS messages (
+      id         SERIAL PRIMARY KEY,
+      session_id INTEGER NOT NULL,
+      phone      TEXT NOT NULL,
+      direction  TEXT NOT NULL,
+      body       TEXT NOT NULL,
+      meta_id    TEXT,
+      time_label TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS login_attempts (
+      id         SERIAL PRIMARY KEY,
+      username   TEXT NOT NULL,
+      ip         TEXT NOT NULL,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS revoked_tokens (
+      jti        TEXT PRIMARY KEY,
+      revoked_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    await client.query(`CREATE TABLE IF NOT EXISTS activity_log (
+      id         SERIAL PRIMARY KEY,
+      agent_id   INTEGER,
+      username   TEXT,
+      action     TEXT NOT NULL,
+      detail     TEXT DEFAULT '',
+      ip         TEXT DEFAULT '',
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )`);
+
+    // Índices
+    await client.query('CREATE INDEX IF NOT EXISTS idx_sess_phone  ON sessions(phone)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_sess_agent  ON sessions(agent_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_sess_status ON sessions(status)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_msg_sess    ON messages(session_id)');
+    await client.query('CREATE INDEX IF NOT EXISTS idx_rev_sess    ON reviews(session_id)');
+
+    // Migraciones para BDs existentes
+    await client.query("ALTER TABLE agents ADD COLUMN IF NOT EXISTS totp_secret TEXT DEFAULT NULL");
+    await client.query("ALTER TABLE agents ADD COLUMN IF NOT EXISTS totp_enabled BOOLEAN DEFAULT FALSE");
+
+    await client.query('COMMIT');
+    console.log('✅ Base de datos PostgreSQL lista');
+  } catch(e) {
+    await client.query('ROLLBACK');
+    throw e;
+  } finally {
+    client.release();
+  }
+  await seedAgents();
 }
 
-// ── Período analítica ─────────────────────────────────────
-let analyticsPeriod = 'week';
-let analyticsFromCustom = null;
-let analyticsToCustom   = null;
-
-function setPeriod(p, el) {
-  analyticsPeriod = p;
-  document.querySelectorAll('.ps-btn').forEach(b => b.classList.remove('on')); el.classList.add('on');
-  const custom = document.getElementById('ps-custom');
-  custom.classList.toggle('vis', p === 'custom');
-  if (p !== 'custom') loadAnalytics();
-}
-
-function applyCustomPeriod() {
-  analyticsFromCustom = document.getElementById('a-from').value;
-  analyticsToCustom   = document.getElementById('a-to').value;
-  if (!analyticsFromCustom || !analyticsToCustom) { toast('Selecciona las dos fechas'); return; }
-  loadAnalytics();
-}
-
-// ═══════════════════════════════════════════
-// SSE
-// ═══════════════════════════════════════════
-function isAnalyticsVisible() {
-  return document.getElementById('p-a')?.classList.contains('on');
-}
-
-function connectSSE() {
-  if (sse) sse.close();
-  sse = new EventSource(API+'/events', { headers: { Authorization: 'Bearer '+token } });
-  // Nota: EventSource no soporta headers en todos los navegadores
-  // En producción usar query param: /events?token=...
-  sse.addEventListener('init', e => {
-    JSON.parse(e.data).forEach(c => sessions[c.sessionId]=c);
-    renderList(); updatePip(); setLive(true);
-  });
-  sse.addEventListener('message', e => {
-    const {sessionId,conv}=JSON.parse(e.data);
-    sessions[sessionId]=conv; renderList(); updatePip();
-    if (activeId===sessionId) renderMsgs(conv);
-    if (conv.unread) toast(`💬 ${conv.name}: ${(conv.preview||'').slice(0,40)}`);
-    if (isAnalyticsVisible()) loadAnalytics();
-  });
-  sse.addEventListener('review', e => {
-    const {sessionId,conv}=JSON.parse(e.data);
-    sessions[sessionId]=conv; renderList();
-    if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); }
-    if (isAnalyticsVisible()) loadAnalytics();
-  });
-  sse.addEventListener('sessionClosed', e => {
-    const {sessionId,conv}=JSON.parse(e.data);
-    sessions[sessionId]=conv; renderList();
-    if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); document.getElementById('btn-rev').style.display='none'; document.getElementById('btn-close').style.display='none'; }
-    if (isAnalyticsVisible()) loadAnalytics();
-  });
-  sse.onerror = () => { setLive(false); setTimeout(connectSSE, 4000); };
-}
-function setLive(ok) { document.getElementById('live').className='live'+(ok?' on':''); }
-
-// Auto-refresco analítica cada 30s si está visible
-setInterval(() => { if (isAnalyticsVisible()) loadAnalytics(); }, 30000);
-
-// ═══════════════════════════════════════════
-// CARGA
-// ═══════════════════════════════════════════
-async function loadSessions() {
-  try {
-    const r = await authFetch('/api/sessions');
-    const data = await r.json();
-    data.forEach(c => sessions[c.sessionId]=c);
-    renderList(); updatePip();
-  } catch { loadLocalDemo(); }
-  connectSSE();
-}
-
-function loadLocalDemo() {
-  const iso = n => { const d=new Date(); d.setDate(d.getDate()-n); return d.toISOString(); };
-  const fmtT = iso => new Date(iso).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'});
-
-  const mkS = (id,phone,name,av,flow,status,msgs,revs,hist,waName,agName,agCol) => ({
-    sessionId:id,phone,name,avatar:av,flow,status,
-    unread:status==='active'&&revs.length===0,
-    preview:msgs[msgs.length-1][1],
-    startedAt:iso(revs.length?14:0),lastMsgAt:iso(0),
-    agentName:agName,agentColor:agCol,waName,
-    contactNote:'',tags:[],
-    messages:msgs.map(m=>({dir:m[0],text:m[1],time:fmtT(iso(0))})),
-    reviews:revs.map((r,i)=>({id:i+1,quality:r[0],note:r[1],agentName:agName,agentColor:agCol,createdAt:iso(14-i*3)})),
-    lastQuality:revs.length?revs[revs.length-1][0]:null,
-    lastReviewer:revs.length?agName:null,
-    reviewCount:revs.length,
-    sessionHistory:hist,
-    qualityTimeline:revs.map((r,i)=>({quality:r[0],note:r[1],agentName:agName,agentColor:agCol,createdAt:iso(14-i*3)})),
-  });
-
-  const hMG=[{id:10,quality:'alta',status:'closed',startedAt:iso(15),reviewedAt:iso(14),preview:'Compré el X300',sessionNote:'Compra cerrada',msgCount:3,reviewCount:1,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'},{id:11,quality:'media',status:'closed',startedAt:iso(8),reviewedAt:iso(7),preview:'Duda envío',sessionNote:'',msgCount:2,reviewCount:2,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'}];
-  const hCL=[{id:20,quality:'alta',status:'closed',startedAt:iso(20),reviewedAt:iso(19),preview:'Pedido #3210',sessionNote:'VIP',msgCount:2,reviewCount:1,lastQuality:'alta',agentName:'Ángel',waName:'WA Ángel'}];
-  const hAM=[{id:30,quality:'baja',status:'closed',startedAt:iso(12),reviewedAt:iso(11),preview:'k',sessionNote:'Sin interés',msgCount:2,reviewCount:1,lastQuality:'baja',agentName:'Clara',waName:'WA Clara'},{id:31,quality:'media',status:'closed',startedAt:iso(3),reviewedAt:iso(2),preview:'¿Cuánto?',sessionNote:'',msgCount:3,reviewCount:2,lastQuality:'media',agentName:'Clara',waName:'WA Clara'}];
-
-  const isAngel = me?.username==='angel'||me?.role==='admin';
-  const isClara = me?.username==='clara'||me?.role==='admin';
-
-  const all = [
-    ...(isAngel?[
-      mkS(1,'34612345678','María García','MG','cliente','active',[['in','¡Hola! ¿Stock del X300?']],[],hMG,'WA Ángel','Ángel','#00e5a0'),
-      mkS(2,'34634567890','Carlos López','CL','crm','active',[['bot','[CRM] Pedido #4521'],['out','Confirmado 3-5 días'],['in','¿Express?']],[],hCL,'WA Ángel','Ángel','#00e5a0'),
-      mkS(3,'34698765432','Javier Moreno','JM','cliente','active',[['in','¿La propuesta?'],['in','Necesitamos respuesta esta semana']],[],[],'WA Ángel','Ángel','#00e5a0'),
-      mkS(10,'34612345678','María García','MG','cliente','closed',[['in','Quiero el X300'],['out','Claro'],['in','Lo compro']],[['alta','Compra cerrada'],['alta','Cliente recurrente']],[],'WA Ángel','Ángel','#00e5a0'),
-      mkS(11,'34634567890','Carlos López','CL','crm','closed',[['bot','[CRM] #3210'],['in','Gracias']],[['alta','VIP']],[],'WA Ángel','Ángel','#00e5a0'),
-      mkS(12,'34655432109','Laura Fernández','LF','crm','closed',[['bot','[CRM] Propuesta'],['in','Revisamos'],['out','Ok']],[['alta','Distribuidor potencial']],[],'WA Ángel','Ángel','#00e5a0'),
-    ]:[]),
-    ...(isClara?[
-      mkS(4,'34698123456','Ana Martínez','AM','mkt','active',[['bot','[Mkt] Oferta'],['in','¿Cuánto exactamente?']],[],hAM,'WA Clara','Clara','#f5a623'),
-      mkS(5,'34655432109','Laura Fernández','LF','crm','active',[['in','Necesitamos ampliar el pedido']],[],[],'WA Clara','Clara','#f5a623'),
-      mkS(6,'34609876543','Sofía Torres','ST','cliente','active',[['in','Info sobre envíos internacionales']],[],[],'WA Clara','Clara','#f5a623'),
-      mkS(30,'34698123456','Ana Martínez','AM','mkt','closed',[['bot','[Mkt] Oferta'],['in','k']],[['baja','Sin interés']],[],'WA Clara','Clara','#f5a623'),
-      mkS(31,'34698123456','Ana Martínez','AM','mkt','closed',[['bot','[Mkt] Nueva'],['in','¿Cuánto?'],['out','Te mando']],[['media','Puede interesar'],['media','2ª revisión ok']],[],'WA Clara','Clara','#f5a623'),
-      mkS(32,'34677890234','Pedro Sánchez','PS','cliente','closed',[['in','hola'],['bot','¡Hola!'],['in','no']],[['baja','No interesado']],[],'WA Clara','Clara','#f5a623'),
-    ]:[]),
+// ─── Crear agentes iniciales ──────────────────────────────
+async function seedAgents() {
+  const agentsList = [
+    { u:'admin', n:'Administrador', r:'admin',  c:'#a78bfa', p: process.env.ADMIN_PASSWORD || 'admin123'  },
+    { u:'angel', n:'Ángel',         r:'agent',  c:'#00e5a0', p: process.env.ANGEL_PASSWORD || 'angel123'  },
+    { u:'clara', n:'Clara',         r:'agent',  c:'#f5a623', p: process.env.CLARA_PASSWORD || 'clara123'  },
   ];
-  all.forEach(c=>sessions[c.sessionId]=c);
-}
-
-// ═══════════════════════════════════════════
-// RENDER LISTA
-// ═══════════════════════════════════════════
-function avCls(phone) { if(avMap[phone]===undefined){avMap[phone]=avN%4;avN++;} return 'av'+avMap[phone]; }
-function ftag(flow) {
-  const m={cliente:'ft-c',crm:'ft-r',mkt:'ft-m',marketing:'ft-m'};
-  const l={cliente:'cli',crm:'CRM',mkt:'mkt',marketing:'mkt'};
-  return `<span class="ft ${m[flow]||'ft-c'}">${l[flow]||flow}</span>`;
-}
-function qbadge(q) { return q?`<span class="qbadge qb-${q}">${q.toUpperCase()}</span>`:''; }
-
-function renderList() {
-  const items = Object.values(sessions).filter(c => {
-    if (tabF==='active' && c.status!=='active') return false;
-    if (tabF==='closed' && c.status!=='closed') return false;
-    if (qF) {
-      const lq = c.lastQuality;
-      if (lq!==qF) return false;
-    }
-    if (srch) {
-      const s=srch.toLowerCase();
-      if (!c.name?.toLowerCase().includes(s)&&!c.preview?.toLowerCase().includes(s)&&!c.phone?.includes(s)) return false;
-    }
-    return true;
-  }).sort((a,b) => {
-    if (a.status!==b.status) return a.status==='active'?-1:1;
-    return (b.lastMsgAt||'').localeCompare(a.lastMsgAt||'');
-  });
-
-  const el=document.getElementById('conv-list');
-  if (!items.length) { el.innerHTML='<div style="padding:28px;text-align:center;font-size:12px;color:var(--t3)">Sin conversaciones</div>'; return; }
-
-  el.innerHTML = items.map(c => {
-    const lq = c.lastQuality;  // calidad de la última revisión (la más reciente)
-    const totalRevs = (c.reviewCount||0) + (c.sessionHistory||[]).reduce((s,h)=>s+(h.reviewCount||0),0);
-
-    // Etiqueta de calidad actual — grande y siempre visible si existe
-    const qualLabel = lq
-      ? `<span class="ci-qual-current cqc-${lq}">● ${lq.toUpperCase()}</span>`
-      : (c.status==='active' ? `<span style="font-size:10px;color:var(--t3);margin-top:3px;display:inline-block">Sin revisar</span>` : '');
-
-    // Mini historial de revisiones anteriores como puntitos
-    const allRevDots = [...(c.sessionHistory||[]).map(h=>h.lastQuality||'act'), ...(c.reviews||[]).map(r=>r.quality)];
-    const dotsRow = allRevDots.length
-      ? `<div class="rev-dots">${allRevDots.slice(-10).map(q=>`<span class="rd ${q||'act'}" title="${q||'activa'}"></span>`).join('')}<span class="rd-lbl">${totalRevs} rev. total</span></div>`
-      : '';
-
-    return `<div class="ci ${c.sessionId===activeId?'on':''} ${selectedIds.has(c.sessionId)?'selected':''}" data-id="${c.sessionId}" onclick="handleCiClick(event,${c.sessionId})">
-      <div class="ci-r1">
-        ${c.status==='active'?`<input type="checkbox" class="ci-cb" ${selectedIds.has(c.sessionId)?'checked':''} onclick="event.stopPropagation();toggleSelect(${c.sessionId},this)">`:''} 
-        <span class="ci-name">
-          <span class="ci-nametxt">${esc(c.name)}</span>
-          ${ftag(c.flow)}
-        </span>
-        <div class="ci-right">
-          ${c.unread&&c.status==='active'?'<div class="unring"></div>':''}
-          <span class="ci-time">${fmtShort(c.lastMsgAt)}</span>
-        </div>
-      </div>
-      <div class="ci-prev">${esc(c.preview||'')}</div>
-      <div style="display:flex;align-items:center;justify-content:space-between;gap:6px">
-        ${qualLabel}
-        ${dotsRow}
-      </div>
-    </div>`;
-  }).join('');
-}
-
-function updatePip() {
-  const n=Object.values(sessions).filter(c=>c.unread&&c.status==='active').length;
-  const el=document.getElementById('upip');
-  el.style.display=n?'flex':'none'; el.textContent=n>9?'9+':n;
-}
-
-// ═══════════════════════════════════════════
-// CHAT
-// ═══════════════════════════════════════════
-function isMobile() { return window.innerWidth <= 640; }
-
-function mobileBack() {
-  document.getElementById('chat').classList.remove('mobile-open');
-  document.getElementById('sb').classList.remove('hidden');
-}
-
-function openConv(id) {
-  // Quitar clase activa del anterior sin re-renderizar toda la lista
-  if (activeId) {
-    const prev = document.querySelector(`.ci[data-id="${activeId}"]`);
-    if (prev) prev.classList.remove('on');
-  }
-  activeId = id;
-  const c = sessions[id];
-  // Marcar el nuevo como activo
-  const curr = document.querySelector(`.ci[data-id="${id}"]`);
-  if (curr) curr.classList.add('on');
-
-  renderMsgs(c); renderInfo(c);
-  document.getElementById('ch-acts').style.display='flex';
-  document.getElementById('in-zone').style.display='block';
-  document.getElementById('sess-chip').textContent=`sesión #${id} · ${c.waName}`;
-  const isActive=c.status==='active';
-  document.getElementById('btn-rev').style.display='flex';
-  document.getElementById('btn-close').style.display=isActive?'flex':'none';
-  authFetch(`/api/sessions/${id}/read`,{method:'POST'}).catch(()=>{});
-  c.unread=false; updatePip();
-
-  // Mobile: mostrar chat y ocultar sidebar
-  if (isMobile()) {
-    document.getElementById('sb').classList.add('hidden');
-    document.getElementById('chat').classList.add('mobile-open');
-    document.getElementById('ch-back-btn').style.display='flex';
-  }
-}
-
-function formatMsg(text) {
-  if (!text) return '';
-  // 1. Escapar HTML
-  let t = text.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
-  // 2. URLs clicables
-  t = t.replace(/(https?:\/\/[^\s<>"]+)/g, '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>');
-  // 3. WhatsApp bold: *texto*
-  t = t.replace(/\*([^*\n]+)\*/g, '<strong>$1</strong>');
-  // 4. WhatsApp italic: _texto_
-  t = t.replace(/(?<![a-zA-Z0-9])_([^_\n]+)_(?![a-zA-Z0-9])/g, '<em>$1</em>');
-  // 5. WhatsApp strikethrough: ~texto~
-  t = t.replace(/~([^~\n]+)~/g, '<del>$1</del>');
-  // 6. WhatsApp monospace: ```texto```
-  t = t.replace(/```([^`]+)```/g, '<code style="font-family:var(--mono);font-size:11px;background:rgba(0,0,0,.2);padding:2px 5px;border-radius:4px">$1</code>');
-  // 7. Saltos de línea
-  t = t.replace(/\n/g, '<br>');
-  return t;
-}
-
-function renderMsgs(c) {
-  const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
-  const lq=c.lastQuality;
-  document.getElementById('ch-c').innerHTML=`
-    <div class="av ${avCls(c.phone)}">${esc(c.avatar||'??')}</div>
-    <div class="ch-info">
-      <h3>${esc(c.name)}</h3>
-      <p>
-        <span style="font-family:var(--mono);font-size:10px">${c.phone}</span>
-        · <span style="background:${c.agentColor}22;color:${c.agentColor};padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700">${c.agentName}</span>
-        ${lq?`· <span style="color:${qcol[lq]};font-weight:700">● ${lq.toUpperCase()}</span>`:'· <span style="color:var(--t3)">sin revisar</span>'}
-        ${c.reviewCount>0?`· <span style="color:var(--t3)">${c.reviewCount} rev.</span>`:''}
-      </p>
-    </div>`;
-
-  const el=document.getElementById('msgs');
-  const msgs = c.messages || [];
-  let lastDay = null;
-  el.innerHTML = msgs.map(m => {
-    // Separador de día
-    const msgDate = m.created_at || null;
-    const dayLabel = msgDate ? fmtDayLabel(msgDate) : null;
-    let sep = '';
-    if (dayLabel && dayLabel !== lastDay) {
-      lastDay = dayLabel;
-      sep = `<div style="display:flex;align-items:center;gap:10px;margin:10px 0;"><div style="flex:1;height:1px;background:var(--b)"></div><span style="font-size:10px;color:var(--t3);font-family:var(--mono);white-space:nowrap;padding:0 6px">${dayLabel}</span><div style="flex:1;height:1px;background:var(--b)"></div></div>`;
-    }
-    // Hora del mensaje — usar created_at si existe, si no usar time
-    const timeLabel = msgDate ? fmtTime(msgDate) : (m.time || '');
-
-    if (m.dir==='system') {
-      const qm=m.text.match(/·\s*(ALTA|MEDIA|BAJA)/i);
-      const q=qm?qm[1].toLowerCase():null;
-      const txt=m.text.replace(/·\s*(ALTA|MEDIA|BAJA)/i,'').trim();
-      return sep+`<div class="sys-n">${esc(txt)}${q?`<span class="sq ${q}">· ${q.toUpperCase()}</span>`:''}</div>`;
-    }
-    const cls=m.dir==='in'?'in':m.dir==='bot'?'bot':'out';
-    return sep+`<div class="msg ${cls}"><div class="bbl">${formatMsg(m.text)}</div><div class="msg-t">${timeLabel}</div></div>`;
-  }).join('');
-  el.scrollTop=el.scrollHeight;
-}
-
-function renderInfo(c) {
-  const qcol={alta:'var(--G)',media:'var(--A)',baja:'var(--R)'};
-  const hist=c.sessionHistory||[];
-  const revs=c.reviews||[];
-  const timeline=c.qualityTimeline||[];
-
-  // Revisiones de esta sesión — etiqueta grande, la más reciente marcada como "Actual"
-  const revsHTML = revs.length
-    ? revs.map((r, i) => {
-        const isLatest = i === revs.length - 1;
-        return `<div class="rev-item ${r.quality}">
-          ${isLatest ? '<span class="ri-latest">Actual</span>' : ''}
-          <div class="ri-top">
-            <span class="ri-qual rq-${r.quality}">${r.quality.toUpperCase()}</span>
-            <span class="ri-date">${fmtDate(r.createdAt)}</span>
-          </div>
-          <div class="ri-agent">${esc(r.agentName)}</div>
-          ${r.note ? `<div class="ri-note">"${esc(r.note)}"</div>` : ''}
-        </div>`;
-      }).join('')
-    : '<p style="font-size:11px;color:var(--t3);padding:4px 0">Sin revisiones todavía · pulsa "Añadir revisión"</p>';
-
-  // Evolución calidad (timeline global del contacto)
-  const maxEvo=Math.max(timeline.length,1);
-  const evoHTML=timeline.length?`
-    <div class="evo-bar">
-      ${timeline.slice(-12).map((r,i)=>{
-        const h=Math.round(((i+1)/Math.min(timeline.length,12))*24)+4;
-        return `<div class="evo-seg" style="background:${r.quality==='alta'?'var(--G)':r.quality==='media'?'var(--A)':'var(--R)'};height:${h}px;flex:1" title="${r.quality.toUpperCase()} · ${fmtDate(r.createdAt)}"></div>`;
-      }).join('')}
-    </div>`:'';
-
-  // Historial sesiones
-  const histHTML=hist.length
-    ?hist.map(h=>`
-      <div class="hi">
-        <div class="hi-top">
-          <span class="hi-lq hlq-${h.lastQuality||'act'}">${h.lastQuality?h.lastQuality.toUpperCase():'ACTIVA'}</span>
-          <span class="hi-date">${fmtDate(h.startedAt)}</span>
-        </div>
-        <div class="hi-prev">${esc(h.preview||'')}</div>
-        <div class="hi-meta">${h.msgCount} msgs · ${h.reviewCount||0} rev. · ${esc(h.waName||'')} · ${esc(h.agentName||'')}</div>
-      </div>`).join('')
-    :'<p style="font-size:11px;color:var(--t3)">Primera sesión de este contacto</p>';
-
-  document.getElementById('ip').innerHTML=`
-    <div>
-      <div class="iph">Contacto</div>
-      <div class="ip-row"><span class="ip-l">Teléfono</span><span class="ip-v" style="font-family:var(--mono);font-size:10px">${c.phone}</span></div>
-      ${c.email ? `<div class="ip-row"><span class="ip-l">Email</span><span class="ip-v" style="font-size:10px">${esc(c.email)}</span></div>` : ''}
-      ${c.clientId ? `<div class="ip-row"><span class="ip-l">ID Cliente</span><span class="ip-v" style="font-family:var(--mono);font-size:10px">${esc(c.clientId)}</span></div>` : ''}
-      <div class="ip-row"><span class="ip-l">Estado</span><span class="ip-v"><span class="stbadge ${c.status==='active'?'st-a':'st-c'}">${c.status==='active'?'Activa':'Cerrada'}</span></span></div>
-      <div class="ip-row"><span class="ip-l">WhatsApp</span><span class="ip-v" style="font-size:10px">${esc(c.waName)}</span></div>
-      <div class="ip-row"><span class="ip-l">Agente</span><span class="ip-v" style="color:${c.agentColor};font-weight:600">${esc(c.agentName)}</span></div>
-    </div>
-    <div>
-      <div class="iph" style="display:flex;align-items:center;justify-content:space-between">
-        <span>Revisiones esta sesión (${revs.length})</span>
-        ${revs.length ? `<span class="ri-qual rq-${revs[revs.length-1].quality}" style="font-size:9px;padding:2px 8px">${revs[revs.length-1].quality.toUpperCase()}</span>` : ''}
-      </div>
-      <div class="rev-timeline">${revsHTML}</div>
-    </div>
-    ${timeline.length>1?`<div><div class="iph">Evolución calidad (${timeline.length} revisiones)</div>${evoHTML}</div>`:''}
-    <div>
-      <div class="iph">Sesiones anteriores (${hist.length})</div>
-      ${histHTML}
-    </div>
-    <div>
-      <div class="iph">Nota del contacto</div>
-      <textarea class="ip-note" id="ip-note" placeholder="Nota sobre este contacto...">${esc(c.contactNote||'')}</textarea>
-      <button class="ip-save" onclick="saveNote('${c.phone}')">Guardar nota</button>
-    </div>`;
-}
-
-function resetChat() {
-  activeId=null;
-  document.getElementById('ch-c').innerHTML='<p style="color:var(--t3);font-size:12px">Selecciona una conversación</p>';
-  document.getElementById('msgs').innerHTML='<div class="empty-c"><div class="ico">💬</div><p style="font-size:12px;color:var(--t3)">Selecciona una conversación</p></div>';
-  document.getElementById('ch-acts').style.display='none';
-  document.getElementById('in-zone').style.display='none';
-  document.getElementById('ip').innerHTML='<div class="iph">Info</div><p style="font-size:11px;color:var(--t3)">Selecciona una conversación</p>';
-}
-
-// ═══════════════════════════════════════════
-// MODAL REVISIÓN
-// ═══════════════════════════════════════════
-function openModal() {
-  if (!activeId) return;
-  const c=sessions[activeId];
-  pendingId=activeId; selQual=null;
-  document.getElementById('m-note').value='';
-  document.getElementById('m-ok').disabled=true;
-  document.querySelectorAll('.qcard').forEach(el=>el.classList.remove('sel'));
-  const revs=c.reviews||[];
-  const nMsgs=(c.messages||[]).filter(m=>m.dir!=='system').length;
-  document.getElementById('m-sub').textContent=`${c.name} · ${nMsgs} mensajes · ${revs.length} revisión(es) anteriores`;
-  const pr=document.getElementById('prev-revs');
-  const prl=document.getElementById('prev-revs-list');
-  if (revs.length) {
-    pr.style.display='block';
-    prl.innerHTML=revs.map(r=>`
-      <div class="pr-item">
-        <div class="pr-dot ${r.quality}"></div>
-        <span class="pr-txt"><b style="color:${r.quality==='alta'?'var(--G)':r.quality==='media'?'var(--A)':'var(--R)'}">${r.quality.toUpperCase()}</b>${r.note?' — '+r.note:''}</span>
-        <span class="pr-date">${fmtDate(r.createdAt)} · ${esc(r.agentName)}</span>
-      </div>`).join('');
-  } else pr.style.display='none';
-  document.getElementById('ov').classList.add('show');
-}
-
-function closeModal() { document.getElementById('ov').classList.remove('show'); pendingId=null; selQual=null; }
-
-function selQ(q) {
-  selQual=q;
-  document.querySelectorAll('.qcard').forEach(el=>el.classList.remove('sel'));
-  document.querySelector(`.qc-${q==='alta'?'A':q==='media'?'M':'B'}`).classList.add('sel');
-  document.getElementById('m-ok').disabled=false;
-}
-
-async function confirmReview() {
-  if (!selQual||!pendingId) return;
-  const id = pendingId;
-  const note = document.getElementById('m-note').value.trim();
-  const quality = selQual;
-  closeModal();
-
-  // 1. Actualizar estado local SIEMPRE e INMEDIATAMENTE
-  const c = sessions[id];
-  if (c) {
-    const rev = {
-      id: Date.now(), quality, note,
-      agentName: me.name, agentColor: me.color,
-      createdAt: new Date().toISOString()
-    };
-    c.reviews = [...(c.reviews||[]), rev];
-    c.lastQuality = quality;
-    c.reviewCount = (c.reviewCount||0) + 1;
-    c.qualityTimeline = [...(c.qualityTimeline||[]), rev];
-    c.messages = [...(c.messages||[]), {
-      dir: 'system',
-      text: `Revisión · ${quality.toUpperCase()} · ${me.name}${note?' · '+note:''}`,
-      time: nowTime()
-    }];
-  }
-
-  // 2. Refrescar UI inmediatamente
-  renderList();
-  updatePip();
-  if (activeId===id && sessions[id]) {
-    renderMsgs(sessions[id]);
-    renderInfo(sessions[id]);
-  }
-  toast(`📋 Revisión añadida · ${quality.toUpperCase()}`);
-
-  // 3. Guardar en backend en segundo plano (sin bloquear la UI)
-  try {
-    const r = await authFetch(`/api/sessions/${id}/review`, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({quality, note})
-    });
-    const updated = await r.json();
-    if (updated.sessionId) {
-      sessions[id] = updated;
-      renderList();
-      if (activeId===id) { renderMsgs(sessions[id]); renderInfo(sessions[id]); }
-    }
-  } catch { /* Sin backend — la actualización local ya está hecha */ }
-}
-
-// ═══════════════════════════════════════════
-// SELECCIÓN MÚLTIPLE
-// ═══════════════════════════════════════════
-let selMode = false;
-const selectedIds = new Set();
-
-function toggleSelMode() {
-  selMode = !selMode;
-  selectedIds.clear();
-  const sb = document.getElementById('sel-bar');
-  const btn = document.getElementById('sel-toggle-btn');
-  const allBtn = document.getElementById('sel-all-btn');
-  const list = document.getElementById('conv-list');
-  if (selMode) {
-    sb.classList.add('vis');
-    btn.textContent = 'Cancelar';
-    allBtn.style.display = 'inline';
-    list.classList.add('sel-mode');
-  } else {
-    sb.classList.remove('vis');
-    btn.textContent = 'Seleccionar';
-    allBtn.style.display = 'none';
-    list.classList.remove('sel-mode');
-  }
-  updateSelBar();
-  renderList();
-}
-
-function handleCiClick(e, id) {
-  if (selMode) {
-    const c = sessions[id];
-    if (!c || c.status !== 'active') return;
-    toggleSelect(id, null);
-  } else {
-    openConv(id);
-  }
-}
-
-function toggleSelect(id, cb) {
-  if (selectedIds.has(id)) selectedIds.delete(id);
-  else selectedIds.add(id);
-  updateSelBar();
-  // Actualizar clase sin re-renderizar toda la lista
-  const el = document.querySelector(`.ci[data-id="${id}"]`);
-  if (el) {
-    el.classList.toggle('selected', selectedIds.has(id));
-    const checkbox = el.querySelector('.ci-cb');
-    if (checkbox) checkbox.checked = selectedIds.has(id);
-  }
-}
-
-function selectAll() {
-  const active = Object.values(sessions).filter(c => c.status === 'active');
-  active.forEach(c => selectedIds.add(c.sessionId));
-  updateSelBar();
-  renderList();
-}
-
-function updateSelBar() {
-  const count = selectedIds.size;
-  document.getElementById('sel-count').textContent = `${count} conversación${count !== 1 ? 'es' : ''} seleccionada${count !== 1 ? 's' : ''}`;
-  document.getElementById('sel-close-btn').disabled = count === 0;
-}
-
-async function closeSelected() {
-  if (selectedIds.size === 0) return;
-  const ids = [...selectedIds];
-  const btn = document.getElementById('sel-close-btn');
-  btn.disabled = true;
-  btn.textContent = `Cerrando ${ids.length}...`;
-
-  let closed = 0;
-  for (const id of ids) {
-    try {
-      const r = await authFetch(`/api/sessions/${id}/close`, { method: 'POST' });
-      const updated = await r.json();
-      if (updated.sessionId) sessions[id] = updated;
-      else if (sessions[id]) sessions[id].status = 'closed';
-      closed++;
-    } catch {
-      if (sessions[id]) sessions[id].status = 'closed';
+  for (const a of agentsList) {
+    const existing = await get('SELECT id FROM agents WHERE username=$1', [a.u]);
+    if (!existing) {
+      await pool.query(
+        'INSERT INTO agents (username,name,role,color,password) VALUES ($1,$2,$3,$4,$5)',
+        [a.u, a.n, a.r, a.c, bcrypt.hashSync(a.p, 10)]
+      );
+      console.log(`✅ ${a.n} creado`);
     }
   }
-
-  selectedIds.clear();
-  toggleSelMode();
-  renderList(); updatePip();
-  toast(`✅ ${closed} conversación${closed !== 1 ? 'es' : ''} cerrada${closed !== 1 ? 's' : ''}`);
-  if (activeId && sessions[activeId]) {
-    renderMsgs(sessions[activeId]);
-    renderInfo(sessions[activeId]);
-    document.getElementById('btn-close').style.display = sessions[activeId].status === 'active' ? 'flex' : 'none';
-  }
-}
-
-async function closeSession() {
-  if (!activeId) return;
-  try {
-    const r=await authFetch(`/api/sessions/${activeId}/close`,{method:'POST'});
-    const updated=await r.json();
-    if (updated.sessionId) sessions[activeId]=updated;
-  } catch {
-    if (sessions[activeId]) {
-      sessions[activeId].status='closed';
-      sessions[activeId].messages=[...(sessions[activeId].messages||[]),{dir:'system',text:'Sesión cerrada',time:nowTime()}];
+  const angel = await get('SELECT id FROM agents WHERE username=$1', ['angel']);
+  const clara = await get('SELECT id FROM agents WHERE username=$1', ['clara']);
+  for (const [agId, name, phoneId, token, verify] of [
+    [angel.id, 'WhatsApp Ángel', process.env.ANGEL_PHONE_NUMBER_ID||'', process.env.ANGEL_WA_TOKEN||'', process.env.ANGEL_VERIFY_TOKEN||'verify_angel'],
+    [clara.id, 'WhatsApp Clara', process.env.CLARA_PHONE_NUMBER_ID||'', process.env.CLARA_WA_TOKEN||'', process.env.CLARA_VERIFY_TOKEN||'verify_clara'],
+  ]) {
+    const ex = await get('SELECT id FROM wa_accounts WHERE agent_id=$1', [agId]);
+    if (!ex) {
+      await pool.query(
+        'INSERT INTO wa_accounts (agent_id,display_name,phone_number_id,wa_token,verify_token) VALUES ($1,$2,$3,$4,$5)',
+        [agId, name, phoneId, token, verify]
+      );
     }
   }
-  renderList(); updatePip();
-  if (sessions[activeId]) { renderMsgs(sessions[activeId]); renderInfo(sessions[activeId]); }
-  document.getElementById('btn-close').style.display='none';
-  toast('Sesión cerrada');
 }
 
-// ═══════════════════════════════════════════
-// FILTROS
-// ═══════════════════════════════════════════
-function setTab(t,el) {
-  tabF=t;
-  document.querySelectorAll('.tab').forEach(b=>b.classList.remove('on')); el.classList.add('on');
-  const qrow=document.getElementById('qf-row');
-  if (t!=='all') { qrow.classList.add('vis'); } else { qrow.classList.remove('vis'); qF=null; document.querySelectorAll('.qf').forEach(b=>b.classList.remove('on')); }
-  renderList();
+// ─── Helpers ─────────────────────────────────────────────
+function madridTime(date) {
+  const d = date || new Date();
+  const year = d.getUTCFullYear();
+  const lastSundayMarch = new Date(Date.UTC(year, 2, 31));
+  lastSundayMarch.setUTCDate(31 - lastSundayMarch.getUTCDay());
+  const lastSundayOctober = new Date(Date.UTC(year, 9, 31));
+  lastSundayOctober.setUTCDate(31 - lastSundayOctober.getUTCDay());
+  const isSummer = d >= lastSundayMarch && d < lastSundayOctober;
+  const offset = isSummer ? 2 : 1;
+  return new Date(d.getTime() + offset * 3600000);
 }
-function setQF(q,el) {
-  qF=qF===q?null:q;
-  document.querySelectorAll('.qf').forEach(b=>b.classList.remove('on')); if(qF)el.classList.add('on');
-  renderList();
-}
-function setSearch(v) { srch=v.toLowerCase(); renderList(); }
+const nowTime = () => madridTime().toISOString().slice(11,16);
+const mkAvatar = n  => (n||'??').split(' ').map(w=>w[0]||'').join('').slice(0,2).toUpperCase() || '??';
+const safeJson = v  => { try { return JSON.parse(v||'[]'); } catch { return []; } };
 
-// ═══════════════════════════════════════════
-// SEND
-// ═══════════════════════════════════════════
-async function sendMsg() {
-  const input=document.getElementById('msg-in');
-  const text=input.value.trim();
-  if (!text||!activeId) return;
-  const c=sessions[activeId]; const btn=document.getElementById('send-b');
-  btn.disabled=true;
-  try { await authFetch('/api/send',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:c.phone,text,sessionId:activeId})}); }
-  catch {}
-  if(!c.messages)c.messages=[];
-  c.messages.push({dir:'out',text,time:nowTime()});
-  c.preview=text; renderMsgs(c); renderList();
-  input.value=''; btn.disabled=false;
-}
-function handleKey(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();sendMsg();}}
-function tpl(t){document.getElementById('msg-in').value=t;document.getElementById('msg-in').focus();}
-
-async function saveNote(phone) {
-  const note=document.getElementById('ip-note')?.value||'';
-  try { await authFetch(`/api/contacts/${phone}`,{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({note})}); } catch {}
-  Object.values(sessions).filter(c=>c.phone===phone).forEach(c=>c.contactNote=note);
-  toast('📝 Nota guardada');
+function extractText(msg) {
+  if (msg.text?.body)   return msg.text.body;
+  if (msg.image)        return '[📷 Imagen]';
+  if (msg.video)        return '[🎥 Vídeo]';
+  if (msg.audio)        return '[🎙 Audio]';
+  if (msg.document)     return `[📄 ${msg.document.filename||'Doc'}]`;
+  if (msg.location)     return '[📍 Ubicación]';
+  if (msg.sticker)      return '[🎨 Sticker]';
+  if (msg.interactive?.button_reply) return msg.interactive.button_reply.title;
+  if (msg.interactive?.list_reply)   return msg.interactive.list_reply.title;
+  return `[${msg.type||'msg'}]`;
 }
 
-// ═══════════════════════════════════════════
-// ANALÍTICA
-// ═══════════════════════════════════════════
-async function loadAnalytics() {
-  const agSel=document.getElementById('ag-sel');
-  const agId=agSel.value||'';
-  let data;
-  try {
-    const params = [];
-    if (agId) params.push('agent_id='+agId);
-    if (analyticsPeriod && analyticsPeriod !== 'custom') {
-      params.push('period='+analyticsPeriod);
-    } else if (analyticsPeriod === 'custom' && analyticsFromCustom && analyticsToCustom) {
-      params.push('from='+analyticsFromCustom+'T00:00:00');
-      params.push('to='+analyticsToCustom+'T23:59:59');
-    }
-    const qs = params.length ? '?'+params.join('&') : '';
-    const r=await authFetch(`/api/analytics${qs}`);
-    data=await r.json();
-    // Actualizar label de período
-    if (data.period?.from) {
-      const fd = data.period.from.slice(0,10), td = data.period.to.slice(0,10);
-      document.getElementById('a-period-lbl').textContent = fd + ' → ' + td;
-    }
-    // Poblar selector de agentes (solo admin)
-    if (me.role==='admin'&&data.agents?.length) {
-      agSel.style.display='block';
-      if (agSel.options.length<=1) {
-        data.agents.filter(a=>a.role!=='admin').forEach(a=>{
-          const o=document.createElement('option');
-          o.value=a.id; o.textContent=a.name;
-          agSel.appendChild(o);
-        });
-      }
-    }
-  } catch { data=buildLocalAnalytics(); }
-  renderAnalytics(data);
+function periodDates(period) {
+  const now   = new Date();
+  const today = now.toISOString().slice(0, 10);
+  if (period === 'today')   return { from: today, to: today };
+  if (period === 'week')    { const d=new Date(now); d.setDate(d.getDate()-7);  return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'month')   { const d=new Date(now); d.setDate(d.getDate()-30); return { from: d.toISOString().slice(0,10), to: today }; }
+  if (period === 'quarter') { const d=new Date(now); d.setDate(d.getDate()-90); return { from: d.toISOString().slice(0,10), to: today }; }
+  return null;
 }
 
-function buildLocalAnalytics() {
-  const all=Object.values(sessions);
-  const byQ={alta:0,media:0,baja:0};
-  all.forEach(c=>(c.reviews||[]).forEach(r=>{if(r.quality)byQ[r.quality]++;}));
-  const byAgent={};
-  all.forEach(c=>{
-    const n=c.agentName||'?';
-    if(!byAgent[n])byAgent[n]={alta:0,media:0,baja:0};
-    (c.reviews||[]).forEach(r=>{if(r.quality)byAgent[n][r.quality]++;});
-  });
-  const days=[]; for(let i=29;i>=0;i--){const d=new Date();d.setDate(d.getDate()-i);days.push({day:d.toISOString().slice(0,10),alta:Math.floor(Math.random()*3),media:Math.floor(Math.random()*4),baja:Math.floor(Math.random()*2)});}
+async function enrichSession(row) {
+  const msgs    = await all('SELECT * FROM messages WHERE session_id=$1 ORDER BY id ASC', [row.id]);
+  const reviews = await all('SELECT r.*,a.name agent_name,a.color agent_color FROM reviews r JOIN agents a ON a.id=r.agent_id WHERE r.session_id=$1 ORDER BY r.id ASC', [row.id]);
+  const history = await all('SELECT s.*,a.name agent_name,a.color agent_color,w.display_name wa_name FROM sessions s JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id WHERE s.phone=$1 AND s.id!=$2 ORDER BY s.id DESC', [row.phone, row.id]);
+  const allRevs = await all('SELECT r.*,a.name agent_name,a.color agent_color FROM reviews r JOIN agents a ON a.id=r.agent_id WHERE r.session_id IN (SELECT id FROM sessions WHERE phone=$1) ORDER BY r.created_at DESC', [row.phone]);
+  const lastRev = reviews[reviews.length-1] || null;
+
   return {
-    summary:{active_sessions:all.filter(c=>c.status==='active').length,total_contacts:new Set(all.map(c=>c.phone)).size,total_reviews:all.reduce((s,c)=>s+(c.reviewCount||0),0),thisMonth:all.length},
-    byQuality:byQ,byAgent,
-    qualityPerDay:days,
-    topContacts:Object.values(all.reduce((acc,c)=>{if(!acc[c.phone])acc[c.phone]={phone:c.phone,name:c.name,sessions:0,altas:0,medias:0,bajas:0};acc[c.phone].sessions++;(c.reviews||[]).forEach(r=>{if(r.quality==='alta')acc[c.phone].altas++;if(r.quality==='media')acc[c.phone].medias++;if(r.quality==='baja')acc[c.phone].bajas++;});return acc;},{})).sort((a,b)=>b.sessions-a.sessions),
-    reviewHistory:all.flatMap(c=>(c.reviews||[]).map(r=>({...r,phone:c.phone,name:c.name,flow:c.flow,sessionId:c.sessionId,agentName:r.agentName}))).sort((a,b)=>(b.createdAt||'').localeCompare(a.createdAt||'')),
+    sessionId:       row.id,
+    phone:           row.phone,
+    name:            row.name || row.phone,
+    avatar:          row.avatar || mkAvatar(row.name),
+    email:           row.email || '',
+    clientId:        row.client_id || '',
+    flow:            row.flow || 'cliente',
+    status:          row.status,
+    unread:          row.unread === 1,
+    preview:         row.preview || '',
+    startedAt:       row.started_at,
+    lastMsgAt:       row.last_message_at,
+    agentId:         row.agent_id,
+    agentName:       row.agent_name || '',
+    agentColor:      row.agent_color || '#00e5a0',
+    waName:          row.wa_name || '',
+    contactNote:     row.contact_note || '',
+    tags:            safeJson(row.tags),
+    reviews:         reviews.map(r => ({ id:r.id, quality:r.quality, note:r.note, agentName:r.agent_name, agentColor:r.agent_color, createdAt:r.created_at })),
+    lastQuality:     lastRev?.quality || null,
+    reviewCount:     reviews.length,
+    messages:        msgs.map(m => ({ dir:m.direction, text:m.body, time:m.time_label||'', id:m.meta_id, created_at:m.created_at })),
+    sessionHistory:  await Promise.all(history.map(async s => {
+      const revs = await all('SELECT * FROM reviews WHERE session_id=$1', [s.id]);
+      const cnt  = await get('SELECT COUNT(*) n FROM messages WHERE session_id=$1', [s.id]);
+      const last = revs[revs.length-1]||null;
+      return { id:s.id, status:s.status, flow:s.flow, startedAt:s.started_at, lastMsgAt:s.last_message_at, preview:s.preview, msgCount:cnt.n, lastQuality:last?.quality||null, reviewCount:revs.length, agentName:s.agent_name, agentColor:s.agent_color, waName:s.wa_name };
+    })),
+    qualityTimeline: allRevs.map(r => ({ quality:r.quality, note:r.note, agentName:r.agent_name, agentColor:r.agent_color, createdAt:r.created_at })),
   };
 }
 
-function setAF(f,el){afF=f;document.querySelectorAll('.afb').forEach(b=>b.classList.remove('on'));el.classList.add('on');loadAnalytics();}
-
-function renderAnalytics(d) {
-  document.getElementById('k-tot').textContent=d.summary.total_sessions||0;
-  document.getElementById('k-msg').textContent=d.summary.with_messages||0;
-  document.getElementById('k-rev').textContent=d.summary.total_reviews||0;
-  document.getElementById('k-alt').textContent=d.byQuality?.alta||0;
-  document.getElementById('k-med').textContent=d.byQuality?.media||0;
-  document.getElementById('k-baj').textContent=d.byQuality?.baja||0;
-
-  const G='#00e5a0',A='#f5a623',R='#ff5757',GR='rgba(255,255,255,.05)';
-  Chart.defaults.color='#3e4260'; Chart.defaults.font.family="'Sora',sans-serif";
-
-  // Gráfico línea por día
-  const days=d.qualityPerDay||[];
-  const labels=days.map(r=>r.day?.slice(5));
-  const mkDs=(q,col)=>({label:q.charAt(0).toUpperCase()+q.slice(1),data:(afF==='all'||afF===q)?days.map(r=>r[q]||0):days.map(()=>0),borderColor:col,backgroundColor:col+'14',fill:true,tension:.4,pointRadius:2,borderWidth:2});
-  const dsets=[mkDs('alta',G),mkDs('media',A),mkDs('baja',R)].filter(ds=>afF==='all'||afF===ds.label.toLowerCase());
-  mkChart('ch-d',{type:'line',data:{labels,datasets:dsets},options:{responsive:true,maintainAspectRatio:false,interaction:{mode:'index',intersect:false},scales:{x:{grid:{color:GR},ticks:{maxTicksLimit:10,font:{size:10}}},y:{grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}});
-
-  // Donut distribución global
-  const qd=afF==='all'?[d.byQuality?.alta||0,d.byQuality?.media||0,d.byQuality?.baja||0]:afF==='alta'?[d.byQuality?.alta||0,0,0]:afF==='media'?[0,d.byQuality?.media||0,0]:[0,0,d.byQuality?.baja||0];
-  mkChart('ch-q',{type:'doughnut',data:{labels:['Alta','Media','Baja'],datasets:[{data:qd,backgroundColor:[G,A,R],borderWidth:0,hoverOffset:5}]},options:{responsive:true,maintainAspectRatio:false,cutout:'70%',plugins:{legend:{position:'bottom',labels:{boxWidth:9,padding:12,font:{size:10}}}}}});
-
-  // Tabla por agente
-  const byAg=d.byAgent||{};
-  const agNames=Object.keys(byAg);
-  document.getElementById('ag-chart-lbl').textContent = d.byAgentPeriod
-    ? `· últimos 30 días (${d.byAgentPeriod.from} → ${d.byAgentPeriod.to})`
-    : (me.role==='admin'?'· todos los agentes':'');
-  document.querySelector('#ag-t tbody').innerHTML=agNames.length?agNames.map(n=>{
-    const v=byAg[n];const tot=(v.alta||0)+(v.media||0)+(v.baja||0);
-    return`<tr><td style="font-weight:600;color:${v.color||'var(--t)'}">${esc(n)}</td><td class="mn" style="color:var(--G)">${v.alta||0}</td><td class="mn" style="color:var(--A)">${v.media||0}</td><td class="mn" style="color:var(--R)">${v.baja||0}</td><td class="mn">${tot}</td></tr>`;
-  }).join(''):'<tr><td colspan="5" style="color:var(--t3)">Sin datos</td></tr>';
-
-  // Gráfico barras por agente (solo si hay más de 1)
-  if (agNames.length > 1) {
-    document.getElementById('ag-chart-box').style.display='block';
-    mkChart('ch-ag',{type:'bar',data:{
-      labels:agNames,
-      datasets:[
-        {label:'Alta',  data:agNames.map(n=>byAg[n].alta||0),  backgroundColor:G,borderRadius:3},
-        {label:'Media', data:agNames.map(n=>byAg[n].media||0), backgroundColor:A,borderRadius:3},
-        {label:'Baja',  data:agNames.map(n=>byAg[n].baja||0),  backgroundColor:R,borderRadius:3},
-      ]},
-      options:{responsive:true,maintainAspectRatio:false,
-        scales:{x:{stacked:true,grid:{display:false},ticks:{font:{size:11}}},y:{stacked:true,grid:{color:GR},beginAtZero:true,ticks:{font:{size:10}}}},
-        plugins:{legend:{labels:{boxWidth:9,font:{size:10}}}}}
-    });
-  }
-
-  renderNoReplyAndRates(d);
+async function getSessionRows(agentId, from, to) {
+  const params = [];
+  let where = 'WHERE 1=1';
+  if (agentId) { params.push(agentId); where += ` AND s.agent_id=$${params.length}`; }
+  if (from)    { params.push(from);    where += ` AND s.last_message_at::date >= $${params.length}::date`; }
+  if (to)      { params.push(to);      where += ` AND s.last_message_at::date <= $${params.length}::date`; }
+  const res = await pool.query(`
+    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,c.client_id,
+           a.name agent_name,a.color agent_color,w.display_name wa_name
+    FROM sessions s
+    JOIN contacts c ON c.phone=s.phone
+    JOIN agents a ON a.id=s.agent_id
+    JOIN wa_accounts w ON w.id=s.wa_account_id
+    ${where}
+    ORDER BY s.last_message_at DESC
+  `, params);
+  return res.rows.map(normalizeRow);
 }
 
-// ── Tasas de respuesta ────────────────────────────────────
-function renderNoReplyAndRates(d) {
-  const G='#00e5a0', R='#ff5757';
-  const rr = d.responseRate || {};
-  function renderRRCard(canvasId, repId, nrpId, pctId, titleId, replied, notReplied, from, to) {
-    const total = replied + notReplied;
-    const pct   = total ? Math.round((replied/total)*100) : 0;
-    document.getElementById(repId).textContent = replied + ' respondidos';
-    document.getElementById(nrpId).textContent = notReplied + ' sin respuesta';
-    document.getElementById(pctId).textContent = pct + '%';
-    if (titleId && from && to) {
-      document.getElementById(titleId).textContent = fmtDate(from) + ' → ' + fmtDate(to);
+// ─── Validaciones ─────────────────────────────────────────
+const isValidPhone = p => /^\d{7,15}$/.test(p);
+const isValidEmail = e => !e || /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
+const isValidAgent = a => !a || ['angel','clara','admin'].includes(a.toLowerCase());
+
+// ─── Log de actividad ────────────────────────────────────
+async function logActivity(agentId, username, action, detail='', ip='') {
+  try {
+    await pool.query(
+      'INSERT INTO activity_log (agent_id,username,action,detail,ip) VALUES ($1,$2,$3,$4,$5)',
+      [agentId||null, username||'system', action, detail.slice(0,500), ip]
+    );
+  } catch {}
+}
+
+// ─── Auth middleware ──────────────────────────────────────
+function auth(req, res, next) {
+  const token = req.headers.authorization?.replace('Bearer ', '');
+  if (!token) return res.status(401).json({ error: 'Sin token' });
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    const jti = decoded.jti || token.slice(-32);
+    get('SELECT jti FROM revoked_tokens WHERE jti=$1', [jti]).then(revoked => {
+      if (revoked) return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión de nuevo.' });
+      req.user = decoded; req.token = token; req.jti = jti;
+      next();
+    }).catch(() => { req.user = decoded; req.token = token; req.jti = jti; next(); });
+  } catch { res.status(401).json({ error: 'Token inválido' }); }
+}
+function adminOnly(req, res, next) {
+  if (req.user.role !== 'admin') return res.status(403).json({ error: 'Solo admins' });
+  next();
+}
+
+// ─── SSE ─────────────────────────────────────────────────
+const clients = new Map();
+function broadcastTo(agentId, event, data) {
+  const msg = `event: ${event}\ndata: ${JSON.stringify(data)}\n\n`;
+  [String(agentId), 'admin'].forEach(k =>
+    clients.get(k)?.forEach(r => { try { r.write(msg); } catch {} })
+  );
+}
+
+app.get('/events', auth, async (req, res) => {
+  res.setHeader('Content-Type',      'text/event-stream');
+  res.setHeader('Cache-Control',     'no-cache');
+  res.setHeader('Connection',        'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no');
+  res.flushHeaders();
+  const key = req.user.role === 'admin' ? 'admin' : String(req.user.id);
+  if (!clients.has(key)) clients.set(key, new Set());
+  clients.get(key).add(res);
+  const agentId = req.user.role === 'admin' ? null : req.user.id;
+  const rows = await getSessionRows(agentId, null, null);
+  const enriched = await Promise.all(rows.map(enrichSession));
+  res.write(`event: init\ndata: ${JSON.stringify(enriched)}\n\n`);
+  const ping = setInterval(() => res.write(': ping\n\n'), 25000);
+  req.on('close', () => { clearInterval(ping); clients.get(key)?.delete(res); });
+});
+
+// ─── Auth ─────────────────────────────────────────────────
+app.post('/api/auth/login', loginLimiter, async (req, res) => {
+  const ip = req.ip || req.connection.remoteAddress || 'unknown';
+  try {
+    const { username, password, totp_code } = req.body || {};
+    if (!username || !password) return res.status(400).json({ error: 'Faltan credenciales' });
+    const user = String(username).toLowerCase().trim().slice(0, 64);
+
+    const recentFails = await get(
+      `SELECT COUNT(*) n FROM login_attempts WHERE username=$1 AND ip=$2 AND created_at > NOW()-INTERVAL '10 minutes'`,
+      [user, ip]
+    );
+    if (recentFails.n >= 5) {
+      console.warn(`🔒 Login bloqueado: ${user} desde ${ip}`);
+      return res.status(429).json({ error: 'Cuenta bloqueada temporalmente. Intenta en 10 minutos.' });
     }
-    mkChart(canvasId, {
-      type:'doughnut',
-      data:{ datasets:[{ data:[replied, notReplied||0.001], backgroundColor:[G, notReplied?R:'rgba(255,255,255,.08)'], borderWidth:0, hoverOffset:3 }] },
-      options:{ responsive:false, cutout:'72%', plugins:{ legend:{ display:false } } }
-    });
+
+    const agent = await get('SELECT * FROM agents WHERE username=$1', [user]);
+    if (!agent || !bcrypt.compareSync(password, agent.password)) {
+      await pool.query('INSERT INTO login_attempts (username,ip) VALUES ($1,$2)', [user, ip]);
+      console.warn(`⚠️  Login fallido: ${user} desde ${ip}`);
+      return res.status(401).json({ error: 'Usuario o contraseña incorrectos' });
+    }
+
+    await pool.query('DELETE FROM login_attempts WHERE username=$1 AND ip=$2', [user, ip]);
+
+    // ── 2FA ──────────────────────────────────────────────
+    // Si el agente no tiene 2FA configurado → devolver señal para configurarlo
+    if (!agent.totp_enabled || !agent.totp_secret) {
+      // Generar secret temporal y devolver QR para configurar
+      const secret = speakeasy.generateSecret({
+        name: `WA Manager Pro (${agent.username})`,
+        issuer: 'WA Manager Pro'
+      });
+      // Guardar secret temporalmente (no activado aún)
+      await pool.query('UPDATE agents SET totp_secret=$1, totp_enabled=FALSE WHERE id=$2',
+        [secret.base32, agent.id]);
+      const qrUrl = await QRCode.toDataURL(secret.otpauth_url);
+      return res.json({
+        requires_2fa_setup: true,
+        qr: qrUrl,
+        secret: secret.base32,
+        agent_id: agent.id,
+        message: 'Escanea el QR con Google Authenticator y confirma con el código'
+      });
+    }
+
+    // Si tiene 2FA activado → verificar código
+    if (agent.totp_enabled) {
+      if (!totp_code) {
+        return res.json({ requires_2fa: true, message: 'Introduce el código de Google Authenticator' });
+      }
+      const valid = speakeasy.totp.verify({
+        secret: agent.totp_secret,
+        encoding: 'base32',
+        token: String(totp_code).replace(/\s/g, ''),
+        window: 1
+      });
+      if (!valid) {
+        await pool.query('INSERT INTO login_attempts (username,ip) VALUES ($1,$2)', [user, ip]);
+        return res.status(401).json({ error: 'Código 2FA incorrecto' });
+      }
+    }
+
+    // Login completo ✅
+    const jti = `${agent.id}-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+    const token = jwt.sign(
+      { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color, jti },
+      JWT_SECRET, { expiresIn: '8h' }
+    );
+    await logActivity(agent.id, agent.username, 'login', '', ip);
+    res.json({ token, agent: { id: agent.id, username: agent.username, name: agent.name, role: agent.role, color: agent.color } });
+  } catch(e) {
+    console.error('Login error:', e.message);
+    res.status(500).json({ error: IS_TEST ? e.message : 'Error interno del servidor' });
   }
-  if (rr.week)  renderRRCard('rr-week-chart',  'rr-w-rep','rr-w-nrp','rr-w-pct', 'rr-w-title', rr.week.replied,  rr.week.notReplied,  rr.week.from,  rr.week.to);
-  if (rr.month) renderRRCard('rr-month-chart', 'rr-m-rep','rr-m-nrp','rr-m-pct', 'rr-m-title', rr.month.replied, rr.month.notReplied, rr.month.from, rr.month.to);
+});
+
+app.get('/api/auth/me', auth, (req, res) => res.json(req.user));
+
+// ─── Confirmar configuración 2FA ──────────────────────────
+app.post('/api/auth/2fa/confirm', async (req, res) => {
+  try {
+    const { agent_id, totp_code } = req.body;
+    if (!agent_id || !totp_code) return res.status(400).json({ error: 'Faltan datos' });
+    const agent = await get('SELECT * FROM agents WHERE id=$1', [+agent_id]);
+    if (!agent || !agent.totp_secret) return res.status(400).json({ error: 'No hay secret configurado' });
+
+    const valid = speakeasy.totp.verify({
+      secret: agent.totp_secret,
+      encoding: 'base32',
+      token: String(totp_code).replace(/\s/g, ''),
+      window: 1
+    });
+    if (!valid) return res.status(401).json({ error: 'Código incorrecto. Inténtalo de nuevo.' });
+
+    // Activar 2FA
+    await pool.query('UPDATE agents SET totp_enabled=TRUE WHERE id=$1', [+agent_id]);
+    console.log(`✅ 2FA activado para agente #${agent_id}`);
+    res.json({ ok: true, message: '2FA activado correctamente' });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Admin: desactivar 2FA de un agente ──────────────────
+app.post('/api/admin/agents/:id/disable-2fa', auth, adminOnly, async (req, res) => {
+  try {
+    await pool.query('UPDATE agents SET totp_secret=NULL, totp_enabled=FALSE WHERE id=$1', [+req.params.id]);
+    await logActivity(req.user.id, req.user.username, 'disable_2fa', `agente #${req.params.id}`, req.ip||'');
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/auth/logout', auth, async (req, res) => {
+  try {
+    const ip = req.ip || req.connection.remoteAddress || 'unknown';
+    await pool.query('INSERT INTO revoked_tokens (jti) VALUES ($1) ON CONFLICT DO NOTHING', [req.jti]);
+    await logActivity(req.user.id, req.user.username, 'logout', '', ip);
+    await pool.query("DELETE FROM revoked_tokens WHERE revoked_at < NOW()-INTERVAL '9 hours'").catch(()=>{});
+    res.json({ ok: true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/env', (req, res) => res.json({ env: IS_TEST ? 'test' : 'production' }));
+
+app.get('/api/admin/activity', auth, adminOnly, async (req, res) => {
+  try {
+    const limit = Math.min(+req.query.limit || 100, 500);
+    const logs = await all('SELECT * FROM activity_log ORDER BY id DESC LIMIT $1', [limit]);
+    res.json(logs);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Webhook Meta ─────────────────────────────────────────
+app.get('/webhook/:vt', async (req, res) => {
+  const wa = await get('SELECT * FROM wa_accounts WHERE verify_token=$1', [req.params.vt]);
+  if (!wa) return res.sendStatus(404);
+  const { 'hub.mode':mode, 'hub.verify_token':token, 'hub.challenge':challenge } = req.query;
+  if (mode==='subscribe' && token===wa.verify_token) return res.status(200).send(challenge);
+  res.sendStatus(403);
+});
+
+app.get('/webhook', async (req, res) => {
+  const { 'hub.mode':mode, 'hub.verify_token':token, 'hub.challenge':challenge } = req.query;
+  const wa = token ? await get('SELECT * FROM wa_accounts WHERE verify_token=$1', [token]) : null;
+  if (wa && mode==='subscribe') return res.status(200).send(challenge);
+  res.sendStatus(403);
+});
+
+async function processWebhook(body, wa) {
+  if (body.object !== 'whatsapp_business_account') return;
+  for (const entry of (body.entry||[])) {
+    const value = entry.changes?.[0]?.value;
+    if (!value?.messages) continue;
+    for (const msg of value.messages) {
+      try {
+        const phone  = msg.from;
+        const name   = value.contacts?.find(c=>c.wa_id===phone)?.profile?.name || phone;
+        const text   = extractText(msg);
+        const time   = nowTime();
+        await upsertContact(phone, name);
+        const session = await getOrCreateSession(phone, wa.id, wa.agent_id, 'cliente', text);
+        await pool.query('INSERT INTO messages (session_id,phone,direction,body,meta_id,time_label) VALUES ($1,$2,$3,$4,$5,$6)',
+          [session.id, phone, 'in', text, msg.id, time]);
+        const enriched = await buildEnrichedSession(session.id);
+        broadcastTo(wa.agent_id, 'message', { sessionId:session.id, phone, conv:enriched });
+      } catch(e) { console.error('Webhook msg error:', e.message); }
+    }
+  }
 }
 
-// ── Abrir conversación desde analítica ────────────────────
-function openConvById(sessionId) {
-  const btn = document.getElementById('nb-c');
-  goPage('c', btn);
-  if (sessions[sessionId]) {
-    openConv(sessionId);
+app.post('/webhook/:vt', async (req, res) => {
+  res.sendStatus(200);
+  const wa = await get('SELECT * FROM wa_accounts WHERE verify_token=$1', [req.params.vt]);
+  if (wa) processWebhook(req.body, wa);
+});
+
+app.post('/webhook', async (req, res) => {
+  res.sendStatus(200);
+  const phoneId = req.body?.entry?.[0]?.changes?.[0]?.value?.metadata?.phone_number_id;
+  if (phoneId) {
+    const wa = await get('SELECT * FROM wa_accounts WHERE phone_number_id=$1', [phoneId]);
+    if (wa) processWebhook(req.body, wa);
+  }
+});
+
+// ─── Helpers de sesión ────────────────────────────────────
+async function upsertContact(phone, name, email, clientId) {
+  const existing = await get('SELECT * FROM contacts WHERE phone=$1', [phone]);
+  if (!existing) {
+    await pool.query(
+      'INSERT INTO contacts (phone,name,avatar,email,client_id) VALUES ($1,$2,$3,$4,$5)',
+      [phone, name||phone, mkAvatar(name||phone), email||'', clientId||'']
+    );
   } else {
-    authFetch('/api/sessions/' + sessionId).then(r=>r.json()).then(conv=>{
-      sessions[conv.sessionId]=conv; renderList(); openConv(conv.sessionId);
-    }).catch(()=>toast('No se pudo abrir la conversación'));
+    if (name && name !== phone && name !== existing.name) {
+      await pool.query('UPDATE contacts SET name=$1,avatar=$2 WHERE phone=$3', [name, mkAvatar(name), phone]);
+    }
+    if (email && !existing.email) {
+      await pool.query('UPDATE contacts SET email=$1 WHERE phone=$2', [email, phone]);
+    }
+    if (clientId && !existing.client_id) {
+      await pool.query('UPDATE contacts SET client_id=$1 WHERE phone=$2', [clientId, phone]);
+    }
   }
 }
 
-
-function mkChart(id,cfg){if(charts[id])charts[id].destroy();const ctx=document.getElementById(id)?.getContext('2d');if(!ctx)return;charts[id]=new Chart(ctx,cfg);}
-
-// ═══════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════
-function authFetch(url,opts={}) {
-  return fetch(API+url,{...opts,headers:{...opts.headers||{},Authorization:'Bearer '+token}});
-}
-function esc(s=''){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function nowTime(){return new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});}
-
-// Convierte ISO a fecha en zona Madrid
-function toMadrid(iso) {
-  if (!iso) return null;
-  try { const d = new Date(iso); return isNaN(d) ? null : d; } catch { return null; }
-}
-// Devuelve "hoy", "ayer" o la fecha DD/MM/YY
-function fmtDayLabel(iso) {
-  const d = toMadrid(iso); if (!d) return '—';
-  const now = new Date();
-  const dStr  = d.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});
-  const todayStr = now.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});
-  const yd = new Date(now); yd.setDate(yd.getDate()-1);
-  const yStr = yd.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});
-  if (dStr === todayStr) return 'Hoy';
-  if (dStr === yStr)     return 'Ayer';
-  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'Europe/Madrid'});
-}
-function fmtTime(iso) {
-  const d = toMadrid(iso); if (!d) return '';
-  return d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
-}
-function fmtDate(iso){
-  const d = toMadrid(iso); if (!d) return '—';
-  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',year:'2-digit',timeZone:'Europe/Madrid'});
-}
-function fmtShort(iso){
-  const d = toMadrid(iso); if (!d) return '';
-  const now = new Date();
-  const dStr = d.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});
-  const todayStr = now.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'});
-  if (dStr === todayStr) return d.toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',timeZone:'Europe/Madrid'});
-  const yd = new Date(now); yd.setDate(yd.getDate()-1);
-  if (dStr === yd.toLocaleDateString('es-ES',{timeZone:'Europe/Madrid'})) return 'Ayer';
-  return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit',timeZone:'Europe/Madrid'});
-}function goPage(id,btn){document.querySelectorAll('.page').forEach(p=>p.classList.remove('on'));document.querySelectorAll('.nb').forEach(b=>b.classList.remove('on'));document.getElementById('p-'+id).classList.add('on');btn.classList.add('on');if(id==='a')loadAnalytics();if(id==='admin')loadAdminPanel();}
-function toast(msg){const el=document.getElementById('toast');el.textContent=msg;el.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>el.classList.remove('show'),3000);}// ═══════════════════════════════════════════
-// PANEL ADMIN
-// ═══════════════════════════════════════════
-async function resetDB() {
-  const msg = document.getElementById('reset-msg');
-  if (!confirm('¿Seguro? Se borrarán TODAS las conversaciones, mensajes y contactos. Esta acción no se puede deshacer.')) return;
-  msg.textContent = 'Borrando...';
-  msg.style.color = 'var(--t3)';
-  try {
-    const r = await authFetch('/api/admin/reset', { method: 'POST' });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    sessions = {};
-    renderList();
-    msg.textContent = '✓ Base de datos limpiada correctamente';
-    msg.style.color = 'var(--G)';
-    setTimeout(() => { msg.textContent = ''; }, 4000);
-  } catch(e) {
-    msg.textContent = 'Error: ' + (e.message || 'No se pudo limpiar');
-    msg.style.color = 'var(--R)';
+async function getOrCreateSession(phone, waId, agentId, flow, preview) {
+  const active = await get("SELECT * FROM sessions WHERE phone=$1 AND wa_account_id=$2 AND status='active' ORDER BY id DESC LIMIT 1", [phone, waId]);
+  if (active) {
+    await pool.query("UPDATE sessions SET preview=$1,unread=1,last_message_at=NOW() WHERE id=$2", [preview, active.id]);
+    return await get('SELECT * FROM sessions WHERE id=$1', [active.id]);
   }
+  const r = await pool.query(
+    'INSERT INTO sessions (phone,wa_account_id,agent_id,flow,preview) VALUES ($1,$2,$3,$4,$5) RETURNING id',
+    [phone, waId, agentId, flow||'cliente', preview]
+  );
+  return await get('SELECT * FROM sessions WHERE id=$1', [r.rows[0].id]);
 }
 
-async function disable2FA(agentId) {
-  if (!confirm('¿Seguro que quieres desactivar el 2FA de este agente? Tendrá que volver a configurarlo la próxima vez que inicie sesión.')) return;
-  try {
-    const r = await authFetch('/api/admin/agents/'+agentId+'/disable-2fa', { method: 'POST' });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    toast('2FA desactivado correctamente');
-    loadAdminPanel();
-  } catch(e) { toast('Error: ' + e.message); }
+async function buildEnrichedSession(sessionId) {
+  const s = await get(`
+    SELECT s.*,c.name,c.avatar,c.tags,c.contact_note,c.email,c.client_id,
+           a.name agent_name,a.color agent_color,w.display_name wa_name
+    FROM sessions s JOIN contacts c ON c.phone=s.phone JOIN agents a ON a.id=s.agent_id JOIN wa_accounts w ON w.id=s.wa_account_id
+    WHERE s.id=$1`, [sessionId]);
+  return s ? enrichSession(s) : null;
 }
 
-async function loadAdminPanel() {
-  if (me.role !== 'admin') return;
+// ─── Sesiones ─────────────────────────────────────────────
+app.get('/api/sessions', auth, async (req, res) => {
   try {
-    const r = await authFetch('/api/admin/agents');
-    if (!r.ok) throw new Error('Error cargando agentes');
-    renderAdminAgents(await r.json());
-  } catch(e) {
-    document.getElementById('adm-agents-grid').innerHTML = `<p style="color:var(--R);font-size:12px">Error: ${esc(e.message)}</p>`;
+    const dateRe = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2})?$/;
+    const rawFrom = req.query.from||null, rawTo = req.query.to||null, rawPeriod = req.query.period||null;
+    const validPeriods = ['today','week','month','quarter'];
+    let dates = {
+      from: rawFrom && dateRe.test(rawFrom) ? rawFrom : null,
+      to:   rawTo   && dateRe.test(rawTo)   ? rawTo   : null,
+    };
+    if (rawPeriod && validPeriods.includes(rawPeriod)) { const pd=periodDates(rawPeriod); if(pd) dates=pd; }
+    const agentId = req.user.role==='admin' ? null : req.user.id;
+    const rows = await getSessionRows(agentId, dates.from, dates.to);
+    const enriched = await Promise.all(rows.map(enrichSession));
+    res.json(enriched);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.get('/api/sessions/:id', auth, async (req, res) => {
+  try {
+    const enriched = await buildEnrichedSession(+req.params.id);
+    if (!enriched) return res.status(404).json({ error: 'No encontrada' });
+    res.json(enriched);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/sessions/:id/read', auth, async (req, res) => {
+  try { await pool.query('UPDATE sessions SET unread=0 WHERE id=$1', [+req.params.id]); res.json({ ok:true }); }
+  catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/sessions/:id/review', auth, async (req, res) => {
+  try {
+    const { quality, note='' } = req.body;
+    if (!['alta','media','baja'].includes(quality)) return res.status(400).json({ error: 'quality: alta|media|baja' });
+    const id = +req.params.id;
+    await pool.query('INSERT INTO reviews (session_id,agent_id,quality,note) VALUES ($1,$2,$3,$4)', [id, req.user.id, quality, note]);
+    await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) SELECT id,phone,$1,$2,$3 FROM sessions WHERE id=$4',
+      ['system', `Revisión · ${quality.toUpperCase()} · ${req.user.name}${note?' · '+note:''}`, nowTime(), id]);
+    await logActivity(req.user.id, req.user.username, 'review', `sesión #${id} · ${quality}`, req.ip||'');
+    const s = await get('SELECT * FROM sessions WHERE id=$1', [id]);
+    const enriched = await buildEnrichedSession(id);
+    broadcastTo(s.agent_id, 'review', { sessionId:id, conv:enriched });
+    res.json(enriched);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+app.post('/api/sessions/:id/close', auth, async (req, res) => {
+  try {
+    const id = +req.params.id;
+    await pool.query("UPDATE sessions SET status='closed' WHERE id=$1", [id]);
+    await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) SELECT id,phone,$1,$2,$3 FROM sessions WHERE id=$4',
+      ['system','Sesión cerrada', nowTime(), id]);
+    const s = await get('SELECT * FROM sessions WHERE id=$1', [id]);
+    const enriched = await buildEnrichedSession(id);
+    broadcastTo(s.agent_id, 'sessionClosed', { sessionId:id, conv:enriched });
+    res.json(enriched);
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Contactos ────────────────────────────────────────────
+app.patch('/api/contacts/:phone', auth, async (req, res) => {
+  try {
+    const { note='', tags=[] } = req.body;
+    await pool.query('UPDATE contacts SET contact_note=$1,tags=$2 WHERE phone=$3', [note, JSON.stringify(tags), req.params.phone]);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
+// ─── Enviar mensaje ───────────────────────────────────────
+app.post('/api/send', auth, async (req, res) => {
+  const { phone, text, sessionId } = req.body;
+  if (!phone||!text) return res.status(400).json({ error: 'Faltan phone y text' });
+  const clean = phone.replace(/[\s+]/g,'');
+  try {
+    if (EXT_SEND) {
+      const r = await fetch(EXT_SEND, {
+        method:'POST',
+        headers:{ 'Content-Type':'application/json', 'X-Api-Key': EXT_API_KEY },
+        body: JSON.stringify({ client_id:clean, phone:'+'+clean.replace(/\D/g,''), message:text, timestamp:new Date().toISOString(), conversation_id:String(sessionId||'') }),
+      });
+      if (!r.ok) {
+        const d = await r.json().catch(()=>({}));
+        return res.status(500).json({ error: d.error||'Error sistema externo' });
+      }
+    } else {
+      const wa = await get('SELECT * FROM wa_accounts WHERE agent_id=$1', [req.user.id]);
+      if (wa?.wa_token && wa?.phone_number_id) {
+        const metaRes = await fetch(`https://graph.facebook.com/v19.0/${wa.phone_number_id}/messages`, {
+          method:'POST',
+          headers:{ 'Authorization':`Bearer ${wa.wa_token}`, 'Content-Type':'application/json' },
+          body: JSON.stringify({ messaging_product:'whatsapp', to:clean, type:'text', text:{ body:text, preview_url:false } }),
+        });
+        const data = await metaRes.json();
+        if (data.error) return res.status(500).json({ error: data.error.message });
+      }
+    }
+    const sid = sessionId || (await get("SELECT id FROM sessions WHERE phone=$1 AND status='active' ORDER BY id DESC LIMIT 1", [clean]))?.id;
+    if (sid) {
+      await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES ($1,$2,$3,$4,$5)', [sid, clean, 'out', text, nowTime()]);
+      await pool.query("UPDATE sessions SET preview=$1,last_message_at=NOW() WHERE id=$2", [text, sid]);
+      const enriched = await buildEnrichedSession(sid);
+      const s = await get('SELECT agent_id FROM sessions WHERE id=$1', [sid]);
+      broadcastTo(s.agent_id, 'message', { sessionId:sid, phone:clean, conv:enriched });
+    }
+    res.json({ success:true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+// ─── Integración sistema externo (AWS) ───────────────────
+function externalAuth(req, res, next) {
+  const key = req.headers['x-api-key'];
+  if (!key || key !== EXT_API_KEY) return res.status(401).json({ error: 'API Key inválida' });
+  next();
+}
+
+function parseTimestamp(ts) {
+  if (!ts) return null;
+  const ddmmyyyy = ts.match(/^(\d{2})\/(\d{2})\/(\d{4})(?:[T\s](\d{2}):(\d{2})(?::(\d{2}))?)?/);
+  if (ddmmyyyy) {
+    const [, dd, mm, yyyy, hh='00', min='00', ss='00'] = ddmmyyyy;
+    return new Date(`${yyyy}-${mm}-${dd}T${hh}:${min}:${ss}+01:00`);
   }
+  const d = new Date(ts);
+  return isNaN(d.getTime()) ? null : d;
 }
 
-function renderAdminAgents(agents) {
-  const grid = document.getElementById('adm-agents-grid');
-  if (!agents.length) { grid.innerHTML='<p style="color:var(--t3);font-size:12px">No hay agentes</p>'; return; }
-  grid.innerHTML = agents.map(a => `
-    <div class="adm-agent-card">
-      <div class="adm-agent-top">
-        <div class="adm-agent-av" style="background:${a.color}22;color:${a.color}">${esc(a.name.slice(0,2).toUpperCase())}</div>
-        <div class="adm-agent-info">
-          <div class="adm-agent-name">${esc(a.name)}</div>
-          <div class="adm-agent-user">@${esc(a.username)}</div>
-          <span class="adm-agent-role ${a.role==='admin'?'role-admin':'role-agent'}">${a.role.toUpperCase()}</span>
-        </div>
-      </div>
-      <div class="adm-pw-label">Nueva contraseña</div>
-      <div class="adm-pw-row">
-        <input class="adm-pw-input" id="pw-input-${a.id}" type="password" placeholder="Mínimo 6 caracteres" autocomplete="new-password" onkeydown="if(event.key==='Enter')changePassword(${a.id})">
-        <button class="adm-pw-btn" id="pw-btn-${a.id}" onclick="changePassword(${a.id})">Cambiar</button>
-      </div>
-      <div class="adm-pw-msg" id="pw-msg-${a.id}"></div>
-      <div style="margin-top:10px;display:flex;align-items:center;justify-content:space-between">
-        <span style="font-size:11px;color:${a.totp_enabled?'var(--G)':'var(--t3)'}">
-          ${a.totp_enabled ? '🔐 2FA activado' : '⚠️ 2FA no configurado'}
-        </span>
-        ${a.totp_enabled ? `<button onclick="disable2FA(${a.id})" style="font-size:10px;padding:4px 10px;border-radius:5px;border:1px solid rgba(255,87,87,.3);background:transparent;color:var(--R);cursor:pointer">Desactivar 2FA</button>` : ''}
-      </div>
-    </div>
-  `).join('');
-}
-
-async function changePassword(agentId) {
-  const input = document.getElementById('pw-input-' + agentId);
-  const btn   = document.getElementById('pw-btn-'   + agentId);
-  const msg   = document.getElementById('pw-msg-'   + agentId);
-  const pw = input.value.trim();
-  if (!pw || pw.length < 6) { msg.textContent='Mínimo 6 caracteres'; msg.className='adm-pw-msg adm-pw-err'; return; }
-  btn.disabled=true; btn.textContent='...'; msg.textContent='';
+app.post('/messages/incoming', externalAuth, async (req, res) => {
   try {
-    const r = await authFetch('/api/admin/agents/'+agentId+'/password', {
-      method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({password:pw})
+    const { client_id, name, phone, email, message, timestamp, conversation_id, direction='incoming', flow='cliente', agent: agentHint } = req.body;
+    if (!phone||!message) return res.status(400).json({ error: 'Faltan: phone, message' });
+
+    const clean = phone.replace(/[\s+]/g,'');
+    if (!isValidPhone(clean))  return res.status(400).json({ error: 'Formato de teléfono inválido' });
+    if (!isValidEmail(email))  return res.status(400).json({ error: 'Formato de email inválido' });
+    if (!isValidAgent(agentHint)) return res.status(400).json({ error: 'Agente no válido. Usa: angel, clara' });
+    if (String(message).length > 4000) return res.status(400).json({ error: 'Mensaje demasiado largo (máx 4000 chars)' });
+
+    const text  = String(message).trim();
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? madridTime(parsedTs).toISOString().slice(11,16) : nowTime();
+    const dir   = direction==='incoming' ? 'in' : 'bot';
+
+    await upsertContact(clean, name, email, client_id);
+
+    let wa = null, agentId = null;
+    if (agentHint) {
+      const ag = await get('SELECT id FROM agents WHERE username=$1', [agentHint.toLowerCase()]);
+      if (ag) { wa = await get('SELECT * FROM wa_accounts WHERE agent_id=$1', [ag.id]); agentId = ag.id; }
+    }
+    if (!wa) {
+      const existSess = await get("SELECT s.*,s.wa_account_id wa_id FROM sessions s WHERE s.phone=$1 AND s.status='active' ORDER BY s.id DESC LIMIT 1", [clean]);
+      if (existSess) { wa = await get('SELECT * FROM wa_accounts WHERE id=$1', [existSess.wa_id]); agentId = existSess.agent_id; }
+    }
+    if (!wa) {
+      wa = await get('SELECT * FROM wa_accounts LIMIT 1');
+      if (wa) agentId = wa.agent_id;
+    }
+    if (!wa||!agentId) return res.status(500).json({ error: 'No hay cuentas WA configuradas' });
+
+    const session = await getOrCreateSession(clean, wa.id, agentId, flow, text);
+    await pool.query('INSERT INTO messages (session_id,phone,direction,body,meta_id,time_label) VALUES ($1,$2,$3,$4,$5,$6)',
+      [session.id, clean, dir, text, conversation_id||null, time]);
+
+    const enriched = await buildEnrichedSession(session.id);
+    broadcastTo(agentId, 'message', { sessionId:session.id, phone:clean, conv:enriched });
+    console.log(`📥 [AWS/${direction}] ${name||clean}: ${text.slice(0,60)}`);
+    res.json({ ok:true, session_id:session.id });
+  } catch(e) { console.error('/messages/incoming:', e.message); res.status(500).json({ error: e.message }); }
+});
+
+app.post('/messages/outgoing', externalAuth, async (req, res) => {
+  try {
+    const { phone, message, timestamp, conversation_id } = req.body;
+    if (!message) return res.status(400).json({ error: 'Falta message' });
+    const clean = phone ? phone.replace(/[\s+]/g,'') : null;
+    const text  = String(message).trim();
+    const parsedTs = parseTimestamp(timestamp);
+    const time  = parsedTs ? madridTime(parsedTs).toISOString().slice(11,16) : nowTime();
+
+    if (clean) {
+      const session = await get("SELECT * FROM sessions WHERE phone=$1 AND status='active' ORDER BY id DESC LIMIT 1", [clean]);
+      if (session) {
+        await pool.query('INSERT INTO messages (session_id,phone,direction,body,meta_id,time_label) VALUES ($1,$2,$3,$4,$5,$6)',
+          [session.id, clean, 'out', text, conversation_id||null, time]);
+        await pool.query("UPDATE sessions SET preview=$1,last_message_at=NOW() WHERE id=$2", [text, session.id]);
+        const enriched = await buildEnrichedSession(session.id);
+        broadcastTo(session.agent_id, 'message', { sessionId:session.id, phone:clean, conv:enriched });
+      }
+    }
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error: e.message }); }
+});
+
+
+// ─── Cierre automático de sesiones inactivas ─────────────
+// Cierra sesiones activas sin actividad en las últimas 48h
+async function autoCloseSessions() {
+  try {
+    const res = await pool.query(`
+      UPDATE sessions SET status='closed'
+      WHERE status='active'
+      AND last_message_at < NOW() - INTERVAL '48 hours'
+      RETURNING id, agent_id
+    `);
+    if (res.rowCount > 0) {
+      console.log(`🔒 Auto-cierre: ${res.rowCount} sesiones cerradas por inactividad`);
+      // Notificar por SSE a los agentes afectados
+      for (const row of res.rows) {
+        const enriched = await buildEnrichedSession(row.id).catch(() => null);
+        if (enriched) broadcastTo(row.agent_id, 'sessionClosed', { sessionId: row.id, conv: enriched });
+      }
+    }
+  } catch(e) { console.error('Auto-cierre error:', e.message); }
+}
+
+// Ejecutar cada hora
+setInterval(autoCloseSessions, 60 * 60 * 1000);
+
+// ─── Analítica ────────────────────────────────────────────
+app.get('/api/analytics', auth, async (req, res) => {
+  try {
+    const aid = req.user.role==='admin' ? (req.query.agent_id?+req.query.agent_id:null) : req.user.id;
+    const dateRe = /^\d{4}-\d{2}-\d{2}$/;
+    const validPeriods = ['today','week','month','quarter'];
+    let dates = {
+      from: req.query.from && dateRe.test(req.query.from) ? req.query.from : null,
+      to:   req.query.to   && dateRe.test(req.query.to)   ? req.query.to   : null,
+    };
+    if (req.query.period && validPeriods.includes(req.query.period)) {
+      const pd = periodDates(req.query.period); if (pd) dates = pd;
+    }
+
+    // Helper: ejecutar query directamente con pool
+    const q  = (sql, p=[]) => pool.query(sql, p).then(r => r.rows.map(normalizeRow));
+    const q1 = (sql, p=[]) => pool.query(sql, p).then(r => normalizeRow(r.rows[0] || {}));
+
+    // Construir cláusulas WHERE dinámicas con $N correctos
+    function buildWhere(opts = {}) {
+      const { agentField='s.agent_id', fromField='s.started_at', toField='s.started_at' } = opts;
+      const p = []; const clauses = [];
+      if (aid)        { p.push(aid);        clauses.push(`${agentField}=$${p.length}`); }
+      if (dates.from) { p.push(dates.from); clauses.push(`${fromField}::date >= $${p.length}::date`); }
+      if (dates.to)   { p.push(dates.to);   clauses.push(`${toField}::date <= $${p.length}::date`); }
+      return { params: p, where: clauses.length ? 'AND ' + clauses.join(' AND ') : '' };
+    }
+
+    const sw = buildWhere({ fromField:'s.last_message_at', toField:'s.last_message_at' });
+    const rw = buildWhere({ fromField:'r.created_at', toField:'r.created_at' });
+
+    // ── KPIs principales ──────────────────────────────────
+    const summary = await q1(`
+      SELECT
+        COUNT(DISTINCT s.id) total_sessions,
+        COUNT(DISTINCT r.id) total_reviews
+      FROM sessions s
+      LEFT JOIN reviews r ON r.session_id=s.id
+      WHERE 1=1 ${sw.where}
+    `, sw.params);
+
+    // Conversaciones con al menos un mensaje (cliente o agente) en el período
+    const withMessages = await q1(`
+      SELECT COUNT(DISTINCT s.id) n FROM sessions s
+      WHERE 1=1 ${sw.where}
+      AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('in','out','bot'))
+    `, sw.params);
+
+    // ── Distribución por calidad ──────────────────────────
+    const byQrows = await q(`
+      SELECT r.quality, COUNT(*) n
+      FROM reviews r JOIN sessions s ON s.id=r.session_id
+      WHERE 1=1 ${rw.where}
+      GROUP BY r.quality
+    `, rw.params);
+
+    // ── Distribución por agente (últimos 30 días, última revisión por sesión) ──
+    const agentFrom30 = new Date(); agentFrom30.setDate(agentFrom30.getDate()-30);
+    const agentFromStr = agentFrom30.toISOString().slice(0,10);
+    const agentToStr   = new Date().toISOString().slice(0,10);
+    const arParams = [agentFromStr, agentToStr];
+    if (aid) arParams.push(aid);
+    const arAgentClause = aid ? `AND s2.agent_id=$${arParams.length}` : '';
+    const agentRows = await q(`
+      SELECT a.name, a.color, lr.quality, COUNT(*) n
+      FROM (
+        SELECT DISTINCT ON (s2.id) s2.id session_id, s2.agent_id, r2.quality
+        FROM sessions s2
+        JOIN reviews r2 ON r2.session_id=s2.id
+        WHERE s2.last_message_at::date >= $1::date
+        AND   s2.last_message_at::date <= $2::date
+        ${arAgentClause}
+        ORDER BY s2.id, r2.created_at DESC
+      ) lr
+      JOIN agents a ON a.id=lr.agent_id
+      WHERE a.role='agent'
+      GROUP BY a.name, a.color, lr.quality
+    `, arParams);
+
+    // ── Revisiones por día ────────────────────────────────
+    const revDay = await q(`
+      SELECT r.created_at::date AS day, r.quality, COUNT(*) n
+      FROM reviews r JOIN sessions s ON s.id=r.session_id
+      WHERE 1=1 ${rw.where}
+      GROUP BY r.created_at::date, r.quality
+      ORDER BY r.created_at::date
+    `, rw.params);
+
+    // ── Sesiones por día ──────────────────────────────────
+    const sessDay = await q(`
+      SELECT s.started_at::date AS day, COUNT(*) n
+      FROM sessions s
+      WHERE 1=1 ${sw.where}
+      GROUP BY s.started_at::date
+      ORDER BY s.started_at::date
+    `, sw.params);
+
+    // ── Sin respuesta (esperando >3 días) ─────────────────
+    const noReplyW = buildWhere({ fromField:'s.started_at', toField:'s.started_at' });
+    const noReply = await q(`
+      SELECT s.id session_id, s.phone, c.name, c.avatar,
+             a.name agent_name, a.color agent_color, w.display_name wa_name,
+             lm.body last_body, lm.created_at last_msg_at,
+             FLOOR(EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400) days_waiting
+      FROM sessions s
+      JOIN contacts c ON c.phone=s.phone
+      JOIN agents a ON a.id=s.agent_id
+      JOIN wa_accounts w ON w.id=s.wa_account_id
+      JOIN messages lm ON lm.id=(
+        SELECT id FROM messages
+        WHERE session_id=s.id AND direction IN ('out','bot')
+        ORDER BY id DESC LIMIT 1
+      )
+      WHERE s.status='active'
+      ${noReplyW.where}
+      AND NOT EXISTS(
+        SELECT 1 FROM messages mi
+        WHERE mi.session_id=s.id
+        AND mi.direction='in'
+        AND mi.created_at > lm.created_at
+      )
+      AND EXTRACT(EPOCH FROM (NOW()-lm.created_at))/86400 > 3
+      ORDER BY days_waiting DESC
+    `, noReplyW.params);
+
+    // ── Respondidos vs No respondidos ──────────────────────
+    // Siempre fijos: últimos 7 días y últimos 30 días
+    const now = new Date();
+    const wDates = { from: new Date(now-7*86400000).toISOString().slice(0,10),  to: now.toISOString().slice(0,10) };
+    const mDates = { from: new Date(now-30*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
+
+    // Lógica respondido/no respondido:
+    // - Respondido: el cliente envió al menos un mensaje 'in' DESPUÉS del último mensaje nuestro ('out'/'bot')
+    // - No respondido: nosotros enviamos el último mensaje y el cliente no ha respondido en 3+ días
+    const rrQuery = (from, to, replied) => {
+      const p = [from, to];
+      const agentClause = aid ? `AND s.agent_id=$${p.push(aid) && p.length}` : '';
+      const clientReplied = replied
+        ? `AND EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (
+              SELECT MAX(created_at) FROM messages
+              WHERE session_id=s.id AND direction IN ('out','bot')
+            )
+          )`
+        : `AND NOT EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (
+              SELECT MAX(created_at) FROM messages
+              WHERE session_id=s.id AND direction IN ('out','bot')
+            )
+          )
+          AND EXTRACT(EPOCH FROM (
+            NOW() - (SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          ))/86400 > 1`;
+      return q1(`
+        SELECT COUNT(DISTINCT s.id) n FROM sessions s
+        WHERE s.last_message_at::date >= $1::date
+        AND   s.last_message_at::date <= $2::date
+        ${agentClause}
+        AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+        ${clientReplied}
+      `, p);
+    };
+
+    const [repliedW, notRepliedW, repliedM, notRepliedM] = await Promise.all([
+      rrQuery(wDates.from, wDates.to, true),
+      rrQuery(wDates.from, wDates.to, false),
+      rrQuery(mDates.from, mDates.to, true),
+      rrQuery(mDates.from, mDates.to, false),
+    ]);
+
+    // ── Evolución semanal y mensual ───────────────────────
+    const [weeklyRate, monthlyRate] = await Promise.all([
+      q(`
+        SELECT TO_CHAR(s.started_at,'IYYY-IW') AS period_week, COUNT(DISTINCT s.id) total,
+          COUNT(DISTINCT CASE WHEN EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          ) THEN s.id END) replied
+        FROM sessions s
+        WHERE s.last_message_at >= NOW()-INTERVAL '90 days'
+        ${sw.where}
+        AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+        GROUP BY period_week ORDER BY period_week ASC
+      `, sw.params),
+      q(`
+        SELECT TO_CHAR(s.started_at,'YYYY-MM') AS period_month, COUNT(DISTINCT s.id) total,
+          COUNT(DISTINCT CASE WHEN EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at>(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          ) THEN s.id END) replied
+        FROM sessions s
+        WHERE s.last_message_at >= NOW()-INTERVAL '365 days'
+        ${sw.where}
+        AND EXISTS(SELECT 1 FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+        GROUP BY period_month ORDER BY period_month ASC
+      `, sw.params),
+    ]);
+
+    // ── Construir respuesta ───────────────────────────────
+    const dayMap = {};
+    revDay.forEach(row => {
+      const d = String(row.day).slice(0,10);
+      if (!dayMap[d]) dayMap[d] = { alta:0, media:0, baja:0 };
+      dayMap[d][row.quality] = +row.n;
     });
-    const d = await r.json();
-    if (d.error) throw new Error(d.error);
-    input.value='';
-    msg.textContent='✓ Contraseña actualizada'; msg.className='adm-pw-msg adm-pw-ok';
-    setTimeout(()=>{msg.textContent='';},3000);
-  } catch(e) {
-    msg.textContent=e.message||'Error al cambiar contraseña'; msg.className='adm-pw-msg adm-pw-err';
-  } finally {
-    btn.disabled=false; btn.textContent='Cambiar';
-  }
-}
+    sessDay.forEach(row => {
+      const d = String(row.day).slice(0,10);
+      if (!dayMap[d]) dayMap[d] = { alta:0, media:0, baja:0 };
+      dayMap[d].total = +row.n;
+    });
+    const byAgent = {};
+    agentRows.forEach(row => {
+      if (!byAgent[row.name]) byAgent[row.name] = { color:row.color, alta:0, media:0, baja:0 };
+      byAgent[row.name][row.quality] = +row.n;
+    });
 
-</script>
-</body>
-</html>
+    res.json({
+      period: dates,
+      summary: {
+        total_sessions:   +summary.total_sessions  || 0,
+        total_reviews:    +summary.total_reviews   || 0,
+        with_messages:    +withMessages.n          || 0,
+      },
+      byQuality: Object.fromEntries(byQrows.map(r => [r.quality, +r.n])),
+      byAgent,
+      byAgentPeriod: { from: agentFromStr, to: agentToStr },
+      qualityPerDay: Object.entries(dayMap).sort(([a],[b])=>a.localeCompare(b)).map(([day,v])=>({day,...v})),
+      agents: req.user.role==='admin' ? (await pool.query('SELECT id,username,name,role,color FROM agents')).rows : [],
+      noReply: noReply.map(r => ({
+        sessionId:  r.session_id,
+        phone:      r.phone,
+        name:       r.name,
+        avatar:     r.avatar,
+        agentName:  r.agent_name,
+        agentColor: r.agent_color,
+        waName:     r.wa_name,
+        lastBody:   r.last_body,
+        lastMsgAt:  r.last_msg_at,
+        daysWaiting: r.days_waiting,
+      })),
+      responseRate: {
+        week:  { from:wDates.from, to:wDates.to, replied:+repliedW.n||0,  notReplied:+notRepliedW.n||0,  total:(+repliedW.n||0)+(+notRepliedW.n||0) },
+        month: { from:mDates.from, to:mDates.to, replied:+repliedM.n||0, notReplied:+notRepliedM.n||0, total:(+repliedM.n||0)+(+notRepliedM.n||0) },
+      },
+      weeklyRate:  weeklyRate.map(r  => ({ period:r.period_week,  total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+      monthlyRate: monthlyRate.map(r => ({ period:r.period_month, total:+r.total, replied:+r.replied, notReplied:(+r.total)-(+r.replied) })),
+    });
+  } catch(e) { console.error('/api/analytics:', e.message); res.status(500).json({ error: e.message }); }
+});
+
+
+// ─── Admin ────────────────────────────────────────────────
+app.get('/api/admin/agents', auth, adminOnly, async (req,res) => res.json(await all('SELECT id,username,name,role,color,totp_enabled FROM agents')));
+app.get('/api/admin/wa-accounts', auth, adminOnly, async (req,res) => res.json(await all('SELECT w.*,a.name agent_name,a.color agent_color FROM wa_accounts w JOIN agents a ON a.id=w.agent_id')));
+
+app.patch('/api/admin/wa-accounts/:id', auth, adminOnly, async (req, res) => {
+  try {
+    const { phone_number_id, wa_token, verify_token, display_name } = req.body;
+    await pool.query('UPDATE wa_accounts SET phone_number_id=COALESCE($1,phone_number_id),wa_token=COALESCE($2,wa_token),verify_token=COALESCE($3,verify_token),display_name=COALESCE($4,display_name) WHERE id=$5',
+      [phone_number_id||null, wa_token||null, verify_token||null, display_name||null, +req.params.id]);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
+app.patch('/api/admin/agents/:id/password', auth, adminOnly, async (req, res) => {
+  try {
+    const { password } = req.body;
+    if (!password||password.length<6) return res.status(400).json({ error:'Mínimo 6 caracteres' });
+    await pool.query('UPDATE agents SET password=$1 WHERE id=$2', [bcrypt.hashSync(password,10), +req.params.id]);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
+app.post('/api/admin/reset', auth, adminOnly, async (req, res) => {
+  try {
+    await pool.query('DELETE FROM messages');
+    await pool.query('DELETE FROM reviews');
+    await pool.query('DELETE FROM sessions');
+    await pool.query('DELETE FROM contacts');
+    await pool.query('DELETE FROM login_attempts');
+    console.log(`🗑️  BD reseteada por ${req.user.username}`);
+    res.json({ ok:true });
+  } catch(e) { res.status(500).json({ error:e.message }); }
+});
+
+// ─── Seed demo — solo en TEST ─────────────────────────────
+app.post('/api/demo/seed', async (req, res) => {
+  if (!IS_TEST) return res.status(403).json({ error: 'No disponible en producción' });
+  try {
+    const angel = await get('SELECT id FROM agents WHERE username=$1',['angel']);
+    const clara = await get('SELECT id FROM agents WHERE username=$1',['clara']);
+    const waA   = await get('SELECT * FROM wa_accounts WHERE agent_id=$1',[angel.id]);
+    const waC   = await get('SELECT * FROM wa_accounts WHERE agent_id=$1',[clara.id]);
+
+    const contacts = [['34612345678','María García','MG'],['34634567890','Carlos López','CL'],['34698123456','Ana Martínez','AM'],['34677890234','Pedro Sánchez','PS'],['34655432109','Laura Fernández','LF'],['34698765432','Javier Moreno','JM']];
+    for (const [p,n,av] of contacts) {
+      await pool.query('INSERT INTO contacts (phone,name,avatar) VALUES ($1,$2,$3) ON CONFLICT DO NOTHING',[p,n,av]);
+    }
+
+    const hist = [
+      {phone:'34612345678',wa:waA,ag:angel,flow:'cliente',days:14,msgs:[['in','Quiero el X300'],['out','Claro'],['in','Lo compro']],revs:[{q:'alta',note:'Compra cerrada'}]},
+      {phone:'34634567890',wa:waA,ag:angel,flow:'crm',    days:20,msgs:[['bot','[CRM] #3210'],['in','Gracias']],revs:[{q:'alta',note:'VIP'}]},
+      {phone:'34698123456',wa:waC,ag:clara,flow:'mkt',    days:12,msgs:[['bot','[Mkt] Oferta'],['in','k']],revs:[{q:'baja',note:'Sin interés'}]},
+    ];
+
+    for (const s of hist) {
+      const d = new Date(); d.setDate(d.getDate()-s.days);
+      const start = new Date(d); start.setHours(9,0,0,0);
+      const end   = new Date(start); end.setHours(10,30,0,0);
+      const r = await pool.query(
+        'INSERT INTO sessions (phone,wa_account_id,agent_id,flow,status,preview,started_at,last_message_at,unread) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id',
+        [s.phone,s.wa.id,s.ag.id,s.flow,'closed',s.msgs[s.msgs.length-1][1],start.toISOString(),end.toISOString(),0]
+      );
+      const sid = r.rows[0].id;
+      for (let i=0;i<s.msgs.length;i++) {
+        const t=new Date(start);t.setMinutes(t.getMinutes()+i*5);
+        await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES ($1,$2,$3,$4,$5)',[sid,s.phone,s.msgs[i][0],s.msgs[i][1],madridTime(t).toISOString().slice(11,16)]);
+      }
+      for (let i=0;i<s.revs.length;i++) {
+        const t=new Date(end);t.setMinutes(t.getMinutes()+i*10);
+        await pool.query('INSERT INTO reviews (session_id,agent_id,quality,note,created_at) VALUES ($1,$2,$3,$4,$5)',[sid,s.ag.id,s.revs[i].q,s.revs[i].note,t.toISOString()]);
+        await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES ($1,$2,$3,$4,$5)',[sid,s.phone,'system',`Revisión · ${s.revs[i].q.toUpperCase()}${s.revs[i].note?' · '+s.revs[i].note:''}`,madridTime(t).toISOString().slice(11,16)]);
+      }
+    }
+
+    const active = [
+      {phone:'34612345678',wa:waA,ag:angel,flow:'cliente',msgs:[['in','¿Stock del X300?']]},
+      {phone:'34698123456',wa:waC,ag:clara,flow:'mkt',    msgs:[['bot','[Mkt] Primavera'],['in','¿Cuánto?']]},
+    ];
+    for (const s of active) {
+      const ex = await get("SELECT id FROM sessions WHERE phone=$1 AND wa_account_id=$2 AND status='active'",[s.phone,s.wa.id]);
+      if (ex) continue;
+      const r = await pool.query('INSERT INTO sessions (phone,wa_account_id,agent_id,flow,preview) VALUES ($1,$2,$3,$4,$5) RETURNING id',[s.phone,s.wa.id,s.ag.id,s.flow,s.msgs[s.msgs.length-1][1]]);
+      const sid = r.rows[0].id;
+      for (let i=0;i<s.msgs.length;i++) await pool.query('INSERT INTO messages (session_id,phone,direction,body,time_label) VALUES ($1,$2,$3,$4,$5)',[sid,s.phone,s.msgs[i][0],s.msgs[i][1],`${9+i}:0${i}`]);
+    }
+
+    res.json({ ok:true, logins:{ admin:'admin123', angel:'angel123', clara:'clara123' } });
+  } catch(e) { console.error('Seed error:',e); res.status(500).json({ error:e.message }); }
+});
+
+// ─── Manejador global de errores ─────────────────────────
+app.use((err, req, res, next) => {
+  console.error('Error no controlado:', err.message);
+  res.status(500).json({ error: IS_TEST ? err.message : 'Error interno del servidor' });
+});
+
+// ─── Arrancar ─────────────────────────────────────────────
+initDB().then(async () => {
+  app.listen(PORT, async () => {
+    console.log(`
+╔══════════════════════════════════════════════════════╗
+║  ${IS_TEST ? '🟡  WA Manager Pro  [ENTORNO TEST]' : '🟢  WA Manager Pro  →  PRODUCCIÓN    '}  :${PORT}  ║
+╠══════════════════════════════════════════════════════╣
+║  DB: PostgreSQL                                      ║
+║  Sistema externo (AWS):                              ║
+║    POST /messages/incoming  (header X-Api-Key)       ║
+║    POST /messages/outgoing  (header X-Api-Key)       ║${IS_TEST ? `
+║  ⚠️  TEST: seed demo auto, contraseñas por defecto   ║` : ''}
+╚══════════════════════════════════════════════════════╝`);
+
+    if (IS_TEST) {
+      const count = await get('SELECT COUNT(*) n FROM sessions').catch(() => ({ n: 0 }));
+      if (+count.n === 0) {
+        console.log('🌱 TEST: ejecutando seed de demo automático...');
+        await fetch(`http://localhost:${PORT}/api/demo/seed`, { method: 'POST' })
+          .then(() => console.log('✅ Seed demo completado'))
+          .catch(e => console.warn('⚠️  Seed demo falló:', e.message));
+      }
+    }
+  });
+}).catch(e => { console.error('Error iniciando DB:', e); process.exit(1); });
