@@ -1069,15 +1069,30 @@ app.get('/api/analytics', auth, async (req, res) => {
     const wDates = { from: new Date(now-7*86400000).toISOString().slice(0,10),  to: now.toISOString().slice(0,10) };
     const mDates = { from: new Date(now-30*86400000).toISOString().slice(0,10), to: now.toISOString().slice(0,10) };
 
+    // Lógica respondido/no respondido:
+    // - Respondido: el cliente envió al menos un mensaje 'in' DESPUÉS del último mensaje nuestro ('out'/'bot')
+    // - No respondido: nosotros enviamos el último mensaje y el cliente no ha respondido en 3+ días
     const rrQuery = (from, to, replied) => {
       const p = [from, to];
       const agentClause = aid ? `AND s.agent_id=$${p.push(aid) && p.length}` : '';
       const clientReplied = replied
-        ? `AND EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
-            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))`
-        : `AND NOT EXISTS(SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
-            AND mi.created_at > (SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot')))
-           AND EXTRACT(EPOCH FROM (NOW()-(SELECT MIN(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))))/86400 > 3`;
+        ? `AND EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (
+              SELECT MAX(created_at) FROM messages
+              WHERE session_id=s.id AND direction IN ('out','bot')
+            )
+          )`
+        : `AND NOT EXISTS(
+            SELECT 1 FROM messages mi WHERE mi.session_id=s.id AND mi.direction='in'
+            AND mi.created_at > (
+              SELECT MAX(created_at) FROM messages
+              WHERE session_id=s.id AND direction IN ('out','bot')
+            )
+          )
+          AND EXTRACT(EPOCH FROM (
+            NOW() - (SELECT MAX(created_at) FROM messages WHERE session_id=s.id AND direction IN ('out','bot'))
+          ))/86400 > 1`;
       return q1(`
         SELECT COUNT(DISTINCT s.id) n FROM sessions s
         WHERE s.last_message_at::date >= $1::date
