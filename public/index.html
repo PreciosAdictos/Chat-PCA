@@ -499,40 +499,51 @@ textarea.ip-note::placeholder{color:var(--t3)}
   .agent-av { margin-bottom:0 }
   .nb-logout { margin-top:0 }
 
-  /* Shell ocupa todo menos nav */
-  #shell { height:calc(100vh - 56px); flex-direction:column }
-  body.test-mode #shell { height:calc(100vh - 56px - 28px) }
+  /* Shell — usar dvh para que Safari calcule bien el espacio disponible */
+  #shell { 
+    height:calc(100dvh - 56px - env(safe-area-inset-bottom, 0px)); 
+    flex-direction:column;
+  }
+  body.test-mode #shell { 
+    height:calc(100dvh - 56px - env(safe-area-inset-bottom, 0px) - 28px);
+  }
 
   /* Nav fijo abajo con safe area para iPhone */
   #nav {
-    padding-bottom:calc(0px + env(safe-area-inset-bottom, 0px));
+    padding-bottom:env(safe-area-inset-bottom, 0px);
     height:calc(56px + env(safe-area-inset-bottom, 0px));
   }
 
   /* Vista conversaciones: sidebar ocupa toda la pantalla */
-  #p-c { position:relative }
+  #p-c { position:relative; overflow:hidden; }
   #sb {
     position:absolute;top:0;left:0;right:0;bottom:0;
     width:100%;min-width:unset;
     z-index:10;
     transition:transform .25s var(--ease);
+    overflow-y:auto;
   }
   #sb.hidden { transform:translateX(-100%) }
 
-  /* Chat ocupa toda la pantalla cuando está abierto */
+  /* Chat ocupa toda la pantalla — flex column para que input esté siempre visible */
   #chat {
-    position:absolute;top:0;left:0;right:0;
-    bottom:0;
+    position:absolute;top:0;left:0;right:0;bottom:0;
     z-index:20;
     display:none;
+    flex-direction:column;
+    overflow:hidden;
   }
   #chat.mobile-open { display:flex }
 
-  /* Input zona — subir para que no quede tapado por el nav ni Safari */
+  /* Mensajes ocupan el espacio restante */
+  #msgs { flex:1; overflow-y:auto; min-height:0; }
+
+  /* Input zona siempre visible al fondo */
   #in-zone {
     padding:8px 10px;
-    padding-bottom:calc(8px + env(safe-area-inset-bottom, 0px));
     flex-shrink:0;
+    background:var(--bg2);
+    border-top:1px solid var(--b);
   }
 
   /* Mensajes — dejar espacio para que el último no quede tapado */
