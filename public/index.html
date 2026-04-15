@@ -515,11 +515,21 @@ textarea.ip-note::placeholder{color:var(--t3)}
 
   /* Chat ocupa toda la pantalla cuando está abierto */
   #chat {
-    position:absolute;top:0;left:0;right:0;bottom:0;
+    position:absolute;top:0;left:0;right:0;
+    bottom:0;
     z-index:20;
     display:none;
   }
   #chat.mobile-open { display:flex }
+
+  /* Input zona — subir para que no quede tapado por el nav */
+  #in-zone {
+    padding:8px 10px;
+    padding-bottom:max(8px, env(safe-area-inset-bottom));
+  }
+
+  /* Mensajes — dejar espacio para que el último no quede tapado */
+  #msgs { padding:12px 10px 12px; }
 
   /* Info panel oculto en mobile */
   #ip { display:none }
@@ -534,26 +544,24 @@ textarea.ip-note::placeholder{color:var(--t3)}
   .ch-back:hover { background:var(--bg3) }
   .ch-back svg { width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round }
 
-  /* Reducir padding en mensajes */
-  #msgs { padding:12px 10px }
-  .msg { max-width:88% }
-
-  /* Input zona */
-  #in-zone { padding:8px 10px }
-  .tpls { gap:4px }
-  .tc { font-size:10px;padding:3px 8px }
-
   /* Header chat compacto */
   #ch-head { padding:8px 12px;gap:6px }
   .schip { display:none }
   .ch-acts { gap:4px }
   .hb { height:28px;padding:0 8px;font-size:10px }
 
+  /* Mensajes burbujas */
+  .msg { max-width:88% }
+
+  /* Templates */
+  .tpls { gap:4px }
+  .tc { font-size:10px;padding:3px 8px }
+
   /* Sidebar compacto */
   #sb-top { padding:12px 12px 6px }
   .tabs { margin-bottom:6px }
 
-  /* Analytics: 1 columna */
+  /* Analytics: 2 columnas */
   .kg { grid-template-columns:1fr 1fr }
   .cg { grid-template-columns:1fr }
   .cc.wide { grid-column:1 }
