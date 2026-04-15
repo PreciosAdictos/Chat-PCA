@@ -499,33 +499,53 @@ textarea.ip-note::placeholder{color:var(--t3)}
   .agent-av { margin-bottom:0 }
   .nb-logout { margin-top:0 }
 
-  /* Shell — usar dvh para que Safari calcule bien el espacio disponible */
-  #shell { 
-    height:calc(100dvh - 56px - env(safe-area-inset-bottom, 0px)); 
-    flex-direction:column;
-  }
-  body.test-mode #shell { 
-    height:calc(100dvh - 56px - env(safe-area-inset-bottom, 0px) - 28px);
-  }
-
-  /* Nav fijo abajo con safe area para iPhone */
+  /* Nav fijo abajo */
   #nav {
-    padding-bottom:env(safe-area-inset-bottom, 0px);
-    height:calc(56px + env(safe-area-inset-bottom, 0px));
+    position:fixed;
+    bottom:0;left:0;right:0;top:auto;
+    width:100%;
+    height:56px;
+    flex-direction:row;
+    justify-content:space-around;
+    align-items:center;
+    padding:0 8px;
+    gap:0;
+    border-top:1px solid rgba(255,255,255,.08);
+    z-index:200;
   }
 
-  /* Vista conversaciones: sidebar ocupa toda la pantalla */
+  /* Shell ocupa toda la pantalla MENOS la barra de nav inferior */
+  #shell {
+    position:fixed;
+    top:0;left:0;right:0;
+    bottom:56px;
+    height:auto;
+    flex-direction:column;
+    overflow:hidden;
+  }
+  body.test-mode #shell {
+    top:28px;
+    bottom:56px;
+    height:auto;
+  }
+
+  /* Páginas ocupan todo el shell */
+  .page { height:100%; overflow:hidden; }
+
+  /* Vista conversaciones */
   #p-c { position:relative; overflow:hidden; }
   #sb {
     position:absolute;top:0;left:0;right:0;bottom:0;
     width:100%;min-width:unset;
     z-index:10;
     transition:transform .25s var(--ease);
-    overflow-y:auto;
+    display:flex;flex-direction:column;
+    overflow:hidden;
   }
   #sb.hidden { transform:translateX(-100%) }
+  #conv-list { flex:1; overflow-y:auto; }
 
-  /* Chat ocupa toda la pantalla — flex column para que input esté siempre visible */
+  /* Chat */
   #chat {
     position:absolute;top:0;left:0;right:0;bottom:0;
     z-index:20;
@@ -535,13 +555,11 @@ textarea.ip-note::placeholder{color:var(--t3)}
   }
   #chat.mobile-open { display:flex }
 
-  /* Mensajes ocupan el espacio restante */
-  #msgs { flex:1; overflow-y:auto; min-height:0; }
-
-  /* Input zona siempre visible al fondo */
+  /* Mensajes se expanden, input fijo abajo */
+  #msgs { flex:1; overflow-y:auto; min-height:0; padding:12px 10px; }
   #in-zone {
-    padding:8px 10px;
     flex-shrink:0;
+    padding:8px 10px;
     background:var(--bg2);
     border-top:1px solid var(--b);
   }
