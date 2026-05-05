@@ -1153,6 +1153,16 @@ function connectSSE() {
   });
   sse.addEventListener('message', e => {
     const {sessionId,conv}=JSON.parse(e.data);
+    // Preservar mensajes ya cargados y añadir los nuevos del conv
+    const existing = sessions[sessionId];
+    if (existing?.messages && conv.messages) {
+      // Fusionar: mantener los que ya tenemos y añadir los que no
+      const existingIds = new Set(existing.messages.map(m=>m.id||m.text+m.time));
+      const newMsgs = conv.messages.filter(m=>!existingIds.has(m.id||m.text+m.time));
+      conv.messages = [...existing.messages, ...newMsgs];
+    } else if (existing?.messages && !conv.messages) {
+      conv.messages = existing.messages;
+    }
     sessions[sessionId]=conv; renderList(); updatePip();
     if (activeId===sessionId) renderMsgs(conv);
     if (conv.unread) toast(`💬 ${conv.name}: ${(conv.preview||'').slice(0,40)}`);
@@ -1160,12 +1170,18 @@ function connectSSE() {
   });
   sse.addEventListener('review', e => {
     const {sessionId,conv}=JSON.parse(e.data);
+    // Preservar mensajes ya cargados
+    const existing = sessions[sessionId];
+    if (existing?.messages) conv.messages = existing.messages;
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); }
     if (isAnalyticsVisible()) loadAnalytics();
   });
   sse.addEventListener('sessionClosed', e => {
     const {sessionId,conv}=JSON.parse(e.data);
+    // Preservar mensajes ya cargados
+    const existing = sessions[sessionId];
+    if (existing?.messages) conv.messages = existing.messages;
     sessions[sessionId]=conv; renderList();
     if (activeId===sessionId) { renderMsgs(conv); renderInfo(conv); document.getElementById('btn-rev').style.display='none'; document.getElementById('btn-close').style.display='none'; }
     if (isAnalyticsVisible()) loadAnalytics();
@@ -1322,7 +1338,7 @@ function mobileBack() {
   document.getElementById('sb').classList.remove('hidden');
 }
 
-function openConv(id) {
+async function openConv(id) {
   // Quitar clase activa del anterior sin re-renderizar toda la lista
   if (activeId) {
     const prev = document.querySelector(`.ci[data-id="${activeId}"]`);
@@ -1334,6 +1350,7 @@ function openConv(id) {
   const curr = document.querySelector(`.ci[data-id="${id}"]`);
   if (curr) curr.classList.add('on');
 
+  // Mostrar header e info inmediatamente (sin mensajes todavía)
   renderMsgs(c); renderInfo(c);
   document.getElementById('ch-acts').style.display='flex';
   document.getElementById('in-zone').style.display='block';
@@ -1349,6 +1366,30 @@ function openConv(id) {
     document.getElementById('sb').classList.add('hidden');
     document.getElementById('chat').classList.add('mobile-open');
     document.getElementById('ch-back-btn').style.display='flex';
+  }
+
+  // Cargar mensajes bajo demanda si aún no los tenemos
+  if (!c.messages) {
+    try {
+      const r = await authFetch(`/api/sessions/${id}/messages`);
+      if (r.ok) {
+        c.messages = await r.json();
+        // Solo actualizar mensajes si esta sesión sigue activa en pantalla
+        if (activeId === id) renderMsgs(c);
+      }
+    } catch {}
+  }
+
+  // Cargar datos completos (historial, timeline) si no los tenemos
+  if (!c.sessionHistory) {
+    try {
+      const r = await authFetch(`/api/sessions/${id}`);
+      if (r.ok) {
+        const full = await r.json();
+        sessions[id] = full;
+        if (activeId === id) { renderMsgs(full); renderInfo(full); }
+      }
+    } catch {}
   }
 }
 
